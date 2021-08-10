@@ -1,0 +1,1 @@
+A Rust crate which provides an abstraction layer over HTTP REST endpoints
