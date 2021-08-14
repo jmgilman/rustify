@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use reqwest::Method;
-use serde::Serialize;
 use url::Url;
 
 use crate::{client::Client, enums::RequestType, errors::ClientError};
@@ -29,33 +28,38 @@ impl ReqwestClient {
         }
     }
 
-    fn build_request<S: Serialize>(
+    fn build_request(
         &self,
         method: &RequestType,
         url: &Url,
-        data: Option<&S>,
+        data: String,
     ) -> Result<reqwest::blocking::Request, ClientError> {
+        let data = match data.as_str() {
+            "null" => None,
+            "{}" => None,
+            _ => Some(data),
+        };
         let builder = match method {
             RequestType::DELETE => match data {
-                Some(d) => self.http.delete(url.as_ref()).json(&d),
+                Some(d) => self.http.delete(url.as_ref()).body(d),
                 None => self.http.delete(url.as_ref()),
             },
             RequestType::GET => self.http.get(url.as_ref()),
             RequestType::HEAD => match data {
-                Some(d) => self.http.head(url.as_ref()).json(&d),
+                Some(d) => self.http.head(url.as_ref()).body(d),
                 None => self.http.head(url.as_ref()),
             },
             RequestType::LIST => match data {
                 Some(d) => self
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref())
-                    .json(&d),
+                    .body(d),
                 None => self
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref()),
             },
             RequestType::POST => match data {
-                Some(d) => self.http.post(url.as_ref()).json(&d),
+                Some(d) => self.http.post(url.as_ref()).body(d),
                 None => self.http.post(url.as_ref()),
             },
         };
@@ -75,24 +79,14 @@ impl Client for ReqwestClient {
         self.base.as_str()
     }
 
-    fn send<S: Serialize>(
-        &self,
-        req: crate::client::Request<S>,
-    ) -> Result<crate::client::Response, ClientError> {
-        let request = self.build_request(&req.method, &req.url, req.data)?;
-
-        let body = match req.data {
-            Some(d) => serde_json::to_string(d).ok(),
-            None => None,
-        };
+    fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError> {
+        let request = self.build_request(&req.method, &req.url, req.data.clone())?;
         let response = self
             .http
             .execute(request)
             .map_err(|e| ClientError::RequestError {
                 source: Box::new(e),
-                url: req.url.to_string(),
-                method: req.method.clone(),
-                body: body,
+                request: req.clone(),
             })?;
 
         let url = response.url().clone();

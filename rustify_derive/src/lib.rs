@@ -6,13 +6,12 @@ extern crate proc_macro;
 use std::ops::Deref;
 
 use proc_macro2::Span;
-use quote::{quote, ToTokens};
+use quote::quote;
 use regex::Regex;
 use syn::{self, spanned::Spanned};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
-const DATA_ATTR_NAME: &str = "data";
 
 #[derive(Debug)]
 struct Error(proc_macro2::TokenStream);
@@ -40,6 +39,8 @@ struct Parameters {
     path: Option<syn::LitStr>,
     method: Option<syn::Expr>,
     result: Option<syn::Type>,
+    transform: Option<syn::Expr>,
+    builder: Option<bool>,
 }
 
 fn parse_attr(meta: &syn::Meta) -> Result<Parameters, Error> {
@@ -98,6 +99,12 @@ fn parse_attr(meta: &syn::Meta) -> Result<Parameters, Error> {
                             Error::new(arg.lit.span(), "Unable to parse value into expression")
                         })?);
                     }
+                    "transform" => {
+                        params.transform = Some(val.deref().clone().parse().map_err(|_| {
+                            Error::new(arg.lit.span(), "Unable to parse value into expression")
+                        })?);
+                    }
+                    "builder" => params.builder = Some(true),
                     _ => {
                         return Err(Error::new(arg.span(), "Unsupported argument"));
                     }
@@ -184,39 +191,6 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         .into_tokens();
     }
 
-    // Find data attribute
-    let mut field_name: Option<proc_macro2::TokenStream> = None;
-    let mut ty: Option<proc_macro2::TokenStream> = None;
-    if let syn::Data::Struct(data) = &s.ast().data {
-        for field in data.fields.iter() {
-            if &field.ident.clone().unwrap().to_string() == DATA_ATTR_NAME {
-                field_name = Some(field.ident.to_token_stream());
-                ty = Some(field.ty.to_token_stream());
-            } else {
-                for attr in field.attrs.iter() {
-                    if attr.path.is_ident(DATA_ATTR_NAME) {
-                        field_name = Some(field.ident.to_token_stream());
-                        ty = Some(field.ty.to_token_stream());
-                    }
-                }
-            }
-        }
-    }
-
-    let mut data_empty = false;
-    let data_type = match ty {
-        Some(t) => t,
-        None => {
-            data_empty = true;
-            quote! {EmptyEndpointData}
-        }
-    };
-
-    let data_fn = match data_empty {
-        true => quote! {None},
-        false => quote! {Some(&self.#field_name)},
-    };
-
     // Parse arguments
     let path = match params.path {
         Some(p) => p,
@@ -226,10 +200,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     };
     let method = match params.method {
         Some(m) => m,
-        None => match data_empty {
-            true => syn::parse_str("RequestType::GET").unwrap(),
-            false => syn::parse_str("RequestType::POST").unwrap(),
-        },
+        None => syn::parse_str("RequestType::GET").unwrap(),
     };
     let result = match params.result {
         Some(r) => r,
@@ -242,13 +213,51 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         Err(e) => return e.into_tokens(),
     };
 
+    // Optional post transformation method
+    let transform = match params.transform {
+        Some(t) => quote! {
+            fn transform(&self, res: String) -> Result<String, ClientError> {
+                #t(res)
+            }
+        },
+        None => quote! {},
+    };
+
+    // Helper functions for the builder architecture
+    let id = s.ast().ident.clone();
+    let builder_id: syn::Type =
+        syn::parse_str(format!("{}Builder", s.ast().ident.to_string()).as_str()).unwrap();
+    let builder_func: syn::Expr =
+        syn::parse_str(format!("{}Builder::default()", s.ast().ident.to_string()).as_str())
+            .unwrap();
+    let builder = match params.builder {
+        Some(_) => quote! {
+            impl #id {
+                pub fn builder() -> #builder_id {
+                    #builder_func
+                }
+            }
+
+            impl #builder_id {
+                pub fn execute<C: Client>(
+                    &self,
+                    client: &C,
+                ) -> Result<Option<#result>, ClientError> {
+                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.execute(client)
+                }
+            }
+        },
+        _ => quote! {},
+    };
+
     // Generate Endpoint implementation
     s.gen_impl(quote! {
+        use ::rustify::client::Client;
         use ::rustify::endpoint::{Endpoint, EmptyEndpointData, EmptyEndpointResult};
         use ::rustify::enums::RequestType;
+        use ::rustify::errors::ClientError;
 
         gen impl Endpoint for @Self {
-            type RequestData = #data_type;
             type Response = #result;
 
             fn action(&self) -> String {
@@ -259,10 +268,10 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 #method
             }
 
-            fn data(&self) -> Option<&Self::RequestData> {
-                #data_fn
-            }
+            #transform
         }
+
+        #builder
     })
 }
 
