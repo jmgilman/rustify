@@ -3,16 +3,26 @@ use std::str::FromStr;
 use reqwest::Method;
 use url::Url;
 
+pub trait MiddleWare {
+    fn handle(&self, r: reqwest::blocking::Request) -> reqwest::blocking::Request;
+}
+
+struct DefaultMiddleWare {}
+impl MiddleWare for DefaultMiddleWare {
+    fn handle(&self, r: reqwest::blocking::Request) -> reqwest::blocking::Request {
+        r
+    }
+}
+
 use crate::{client::Client, enums::RequestType, errors::ClientError};
-type MiddleWare = Box<dyn Fn(reqwest::blocking::Request) -> reqwest::blocking::Request>;
 pub struct ReqwestClient {
     pub http: reqwest::blocking::Client,
     pub base: String,
-    pub middle: MiddleWare,
+    pub middle: Box<dyn MiddleWare>,
 }
 
 impl ReqwestClient {
-    pub fn new(base: &str, http: reqwest::blocking::Client, middle: MiddleWare) -> Self {
+    pub fn new(base: &str, http: reqwest::blocking::Client, middle: Box<dyn MiddleWare>) -> Self {
         ReqwestClient {
             base: base.to_string(),
             http,
@@ -24,7 +34,15 @@ impl ReqwestClient {
         ReqwestClient {
             base: base.to_string(),
             http: reqwest::blocking::Client::default(),
-            middle: Box::new(|r| r),
+            middle: Box::new(DefaultMiddleWare {}),
+        }
+    }
+
+    pub fn with_middleware(base: &str, middle: Box<dyn MiddleWare>) -> ReqwestClient {
+        ReqwestClient {
+            base: base.to_string(),
+            http: reqwest::blocking::Client::default(),
+            middle: middle,
         }
     }
 
@@ -70,7 +88,7 @@ impl ReqwestClient {
                 url: url.to_string(),
                 method: method.clone(),
             })?;
-        Ok((self.middle)(req))
+        Ok(self.middle.handle(req))
     }
 }
 

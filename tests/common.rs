@@ -15,4 +15,11 @@ impl TestServer {
             client: ReqwestClient::default(url.as_str()),
         }
     }
+
+    pub fn with_client(mut client: ReqwestClient) -> TestServer {
+        let server = MockServer::start();
+        let url = server.base_url().clone();
+        client.base = url;
+        TestServer { server, client }
+    }
 }
