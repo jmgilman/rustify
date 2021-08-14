@@ -8,7 +8,7 @@ pub trait Client {
 
     fn base(&self) -> &str;
 
-    fn execute(&self, req: Request) -> Result<String, ClientError> {
+    fn execute(&self, req: Request) -> Result<Vec<u8>, ClientError> {
         let response = self.send(req)?;
 
         // Check response
@@ -29,12 +29,12 @@ pub trait Client {
 pub struct Request {
     pub url: Url,
     pub method: RequestType,
-    pub data: String,
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Response {
     pub url: Url,
     pub code: u16,
-    pub content: String,
+    pub content: Vec<u8>,
 }

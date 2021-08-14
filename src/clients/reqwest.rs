@@ -50,35 +50,30 @@ impl ReqwestClient {
         &self,
         method: &RequestType,
         url: &Url,
-        data: String,
+        data: Vec<u8>,
     ) -> Result<reqwest::blocking::Request, ClientError> {
-        let data = match data.as_str() {
-            "null" => None,
-            "{}" => None,
-            _ => Some(data),
-        };
         let builder = match method {
-            RequestType::DELETE => match data {
-                Some(d) => self.http.delete(url.as_ref()).body(d),
-                None => self.http.delete(url.as_ref()),
+            RequestType::DELETE => match data.is_empty() {
+                false => self.http.delete(url.as_ref()).body(data),
+                true => self.http.delete(url.as_ref()),
             },
             RequestType::GET => self.http.get(url.as_ref()),
-            RequestType::HEAD => match data {
-                Some(d) => self.http.head(url.as_ref()).body(d),
-                None => self.http.head(url.as_ref()),
+            RequestType::HEAD => match data.is_empty() {
+                false => self.http.head(url.as_ref()).body(data),
+                true => self.http.head(url.as_ref()),
             },
-            RequestType::LIST => match data {
-                Some(d) => self
+            RequestType::LIST => match data.is_empty() {
+                false => self
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref())
-                    .body(d),
-                None => self
+                    .body(data),
+                true => self
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref()),
             },
-            RequestType::POST => match data {
-                Some(d) => self.http.post(url.as_ref()).body(d),
-                None => self.http.post(url.as_ref()),
+            RequestType::POST => match data.is_empty() {
+                false => self.http.post(url.as_ref()).body(data),
+                true => self.http.post(url.as_ref()),
             },
         };
         let req = builder
@@ -109,9 +104,12 @@ impl Client for ReqwestClient {
 
         let url = response.url().clone();
         let status_code = response.status().as_u16();
-        let content = response.text().map_err(|e| ClientError::ResponseError {
-            source: Box::new(e),
-        })?;
+        let content = response
+            .bytes()
+            .map_err(|e| ClientError::ResponseError {
+                source: Box::new(e),
+            })?
+            .to_vec();
         Ok(crate::client::Response {
             url,
             code: status_code,

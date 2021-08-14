@@ -11,7 +11,7 @@ pub enum ClientError {
     #[error("Error building endpoint request")]
     EndpointBuildError { source: Box<dyn StdError> },
     #[error("An error occurred in processing the request")]
-    GenericError {},
+    GenericError { source: Box<dyn StdError> },
     #[error("Error sending HTTP request")]
     RequestError {
         source: Box<dyn StdError>,
@@ -28,13 +28,13 @@ pub enum ClientError {
     #[error("Error parsing HTTP response")]
     ResponseParseError {
         source: Box<dyn StdError>,
-        content: String,
+        content: Vec<u8>,
     },
     #[error("Server returned error")]
     ServerResponseError {
         url: String,
         code: u16,
-        content: String,
+        content: Vec<u8>,
     },
     #[error("Error parsing URL")]
     UrlParseError { source: ParseError, url: String },

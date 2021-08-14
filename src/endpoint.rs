@@ -29,23 +29,38 @@ pub trait Endpoint: Debug + Serialize + Sized {
         let data = serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
             source: Box::new(e),
         })?;
+        let data = match data.as_str() {
+            "null" => "".to_string(),
+            "{}" => "".to_string(),
+            _ => data,
+        }
+        .into_bytes();
         self.parse(client.execute(Request { url, method, data }))
     }
 
     fn parse(
         &self,
-        res: Result<String, ClientError>,
+        res: Result<Vec<u8>, ClientError>,
     ) -> Result<Option<Self::Response>, ClientError> {
         match res {
-            Ok(r) => match r.is_empty() {
-                false => Ok(Some(serde_json::from_str(r.as_str()).map_err(|e| {
-                    ClientError::ResponseParseError {
-                        source: Box::new(e),
-                        content: r.clone(),
-                    }
-                })?)),
-                true => Ok(None),
-            },
+            Ok(r) => {
+                let r_conv_err = r.clone();
+                let r_parse_err = r.clone();
+                let c = String::from_utf8(r).map_err(|e| ClientError::ResponseParseError {
+                    source: Box::new(e),
+                    content: r_conv_err,
+                })?;
+                let c = self.transform(c)?;
+                match c.is_empty() {
+                    false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
+                        ClientError::ResponseParseError {
+                            source: Box::new(e),
+                            content: r_parse_err,
+                        }
+                    })?)),
+                    true => Ok(None),
+                }
+            }
             Err(e) => Err(e),
         }
     }

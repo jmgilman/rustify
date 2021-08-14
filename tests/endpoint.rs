@@ -144,27 +144,31 @@ fn test_transform() {
     #[endpoint(path = "test/path", result = "TestResponse", transform = "strip")]
     struct Test {}
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     struct TestResponse {
         age: u8,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     struct TestWrapper {
         result: TestResponse,
     }
 
     fn strip(res: String) -> Result<String, ClientError> {
         let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|_| ClientError::GenericError {})?;
-        serde_json::to_string(&r.result).map_err(|_| ClientError::GenericError {})
+            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
+                source: Box::new(e),
+            })?;
+        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
+            source: Box::new(e),
+        })
     }
 
     let t = TestServer::new();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path");
-        then.status(200).json_body(json!({"age": 30}));
+        then.status(200).json_body(json!({"result": {"age": 30}}));
     });
     let r = e.execute(&t.client);
 
@@ -193,20 +197,24 @@ fn test_complex() {
         optional: Option<String>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     struct TestResponse {
         age: u8,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     struct TestWrapper {
         result: TestResponse,
     }
 
     fn strip(res: String) -> Result<String, ClientError> {
         let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|_| ClientError::GenericError {})?;
-        serde_json::to_string(&r.result).map_err(|_| ClientError::GenericError {})
+            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
+                source: Box::new(e),
+            })?;
+        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
+            source: Box::new(e),
+        })
     }
 
     let t = TestServer::new();
@@ -214,7 +222,7 @@ fn test_complex() {
         when.method(POST)
             .path("/test/path/test")
             .json_body(json!({ "kind": "test" }));
-        then.status(200).json_body(json!({"age": 30}));
+        then.status(200).json_body(json!({"result": {"age": 30}}));
     });
     let r = Test::builder().name("test").kind("test").execute(&t.client);
 
