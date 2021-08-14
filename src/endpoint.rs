@@ -10,6 +10,12 @@ pub trait Endpoint: Debug + Serialize + Sized {
     fn method(&self) -> RequestType;
 
     fn build_url(&self, base: &str) -> Result<url::Url, ClientError> {
+        log::info!(
+            "Building endpoint url from {} base URL and {} action",
+            base,
+            self.action()
+        );
+
         let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
             url: base.to_string(),
             source: e,
@@ -24,6 +30,9 @@ pub trait Endpoint: Debug + Serialize + Sized {
         &self,
         client: &C,
     ) -> Result<Option<Self::Response>, ClientError> {
+        log::info!("Executing endpoint");
+        log::debug! {"Endpoint: {:#?}", self};
+
         let url = self.build_url(client.base())?;
         let method = self.method();
         let data = serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
@@ -50,7 +59,11 @@ pub trait Endpoint: Debug + Serialize + Sized {
                     source: Box::new(e),
                     content: r_conv_err,
                 })?;
+
+                log::info!("Parsing JSON result from string");
+                log::debug!("Content before transform: {}", c);
                 let c = self.transform(c)?;
+                log::debug!("Content after transform: {}", c);
                 match c.is_empty() {
                     false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
                         ClientError::ResponseParseError {

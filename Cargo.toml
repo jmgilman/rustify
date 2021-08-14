@@ -6,6 +6,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4.14"
 reqwest = { version = "0.11.4", features = ["blocking", "json"] }
 rustify_derive = { path = "rustify_derive" }
 serde = { version = "1.0.127", features = ["derive"] }
@@ -15,5 +16,7 @@ url = "2.2.2"
 
 [dev-dependencies]
 derive_builder = "0.10.2"
+env_logger = "0.9.0"
 httpmock = "0.6.2"
 serde_with = "1.9.4"
+test-env-log = "0.2.7"

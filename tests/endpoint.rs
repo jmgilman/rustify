@@ -8,9 +8,11 @@ use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_with::skip_serializing_none;
+use test_env_log::test;
 
 #[test]
 fn test_path() {
+    log::info!("LOLOKSDIFJEUHOI");
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path")]
     struct Test {}

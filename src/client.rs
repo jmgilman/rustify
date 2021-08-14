@@ -9,7 +9,20 @@ pub trait Client {
     fn base(&self) -> &str;
 
     fn execute(&self, req: Request) -> Result<Vec<u8>, ClientError> {
+        log::info!(
+            "Client sending {:#?} request to {} with {} bytes of data",
+            req.method,
+            req.url,
+            req.data.len()
+        );
         let response = self.send(req)?;
+
+        log::info!(
+            "Client received {} response from {} with {} bytes of body data",
+            response.code,
+            response.url,
+            response.content.len()
+        );
 
         // Check response
         if !HTTP_SUCCESS_CODES.contains(&response.code) {
