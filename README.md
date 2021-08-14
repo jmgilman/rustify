@@ -108,10 +108,11 @@ Breaking this down:
 
 ```
 
-* The `path` argument supports base substitution using curly braces. In this case
-the final url would be `http://api.com/test/path/test`. Since the `name` field
-is only used to build the endpoint URL, we add the `#[serde(skip)]` attribute
-to inform `serde` to not serialize this field when building the request.
+* The `path` argument supports basic substitution using curly braces. In this 
+case the final url would be `http://api.com/test/path/test`. Since the `name` 
+field is only used to build the endpoint URL, we add the `#[serde(skip)]` 
+attribute to inform `serde` to not serialize this field when building the 
+request.
 * The `method` argument specifies the type of the HTTP request. 
 * The `result` argument specifies the type of response that the `execute()` 
 method will return. This type must derive `Deserialize`. 
@@ -126,7 +127,7 @@ particular, it adds a `builder()` static method to the base struct and an
 `execute()` method to the generated `TestBuilder` struct which automatically
 calls `build()` on `TestBuilder` and then executes the result. This allows for
 concise calls like this: 
-`Test::builder().name("test").kind("test").execute(&t.client);`.
+`Test::builder().name("test").kind("test").execute(&client);`.
 
 This example also demonstrates a common pattern of using `skip_serializing_none`
 macro to force `serde` to not serialize fields of type `Option::None`. When
@@ -136,7 +137,7 @@ don't get serialized when not specified when building. For example:
 
 ```rust
 // Errors, `kind` field is required
-let result = Test::builder().name("test").execute(&t.client);
+let result = Test::builder().name("test").execute(&client);
 
 // Produces POST http://api.com/test/path/test {"kind": "test"}
 let result = Test::builder().name("test").kind("test").execute(&client);
@@ -146,7 +147,7 @@ let result = Test::builder().name("test").kind("test").optional("yes").execute(&
 ```
 
 # Testing
-See the the [tests](tree/master/tests) directory for tests. Run tests with
+See the the [tests](tests) directory for tests. Run tests with
 `cargo test`. 
 
 ## Contributing
