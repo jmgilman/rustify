@@ -1,13 +1,9 @@
 # rustify
 
 <p align="center">
+    <a href="https://github.com/jmgilman/rustify/actions/workflows/validate.yml"><img src="https://github.com/jmgilman/rustify/actions/workflows/validate.yml/badge.svg"/></a>
     <a href="https://crates.io/crates/rustify"><img src="https://img.shields.io/crates/v/rustify"></a>
     <a href="https://docs.rs/rustify"><img src="https://img.shields.io/docsrs/rustify" /></a>
-</p>
-
-<p align="center">
-    <a href="https://github.com/jmgilman/rustify/actions/workflows/default.yml"><img src="https://github.com/jmgilman/rustify/actions/workflows/validate.yml/badge.svg"/></a>
-    <a href="https://github.com/jmgilman/rustify/actions/workflows/default.yml"><img src="https://github.com/jmgilman/rustify/actions/workflows/audit.yml/badge.svg"/></a>
 </p>
 
 > A Rust crate which provides an abstraction layer over HTTP REST API endpoints
@@ -121,6 +117,7 @@ fn test_complex() {
             })?;
         serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
             source: Box::new(e),
+        })
     }
 
     let client = ReqwestClient::default("http://api.com");
