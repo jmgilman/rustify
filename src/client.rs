@@ -1,13 +1,24 @@
+use crate::{enums::RequestType, errors::ClientError};
 use url::Url;
 
-use crate::{enums::RequestType, errors::ClientError};
-
+/// An array of HTTP response codes which indicate a successful response
 const HTTP_SUCCESS_CODES: [u16; 2] = [200, 204];
+
+/// Represents an HTTP client which is capable of executing
+/// [Endpoints][crate::endpoint::Endpoint] by sending the [Request] generated
+/// by the Endpoint and returning a [Response].
 pub trait Client {
+    /// Sends the given [Request] and returns a [Response]. Implementations
+    /// should consolidate all errors into the [ClientError] type.
     fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError>;
 
+    /// Returns the base URL the client is configured with. This is used for
+    /// creating the fully qualified URLs used when executing
+    /// [Endpoints][crate::endpoint::Endpoint].
     fn base(&self) -> &str;
 
+    /// This method provides a common interface to
+    /// [Endpoints][crate::endpoint::Endpoint] for execution.
     fn execute(&self, req: Request) -> Result<Vec<u8>, ClientError> {
         log::info!(
             "Client sending {:#?} request to {} with {} bytes of data",
@@ -38,6 +49,7 @@ pub trait Client {
     }
 }
 
+/// Represents an HTTP request
 #[derive(Debug, Clone)]
 pub struct Request {
     pub url: Url,
@@ -45,6 +57,7 @@ pub struct Request {
     pub data: Vec<u8>,
 }
 
+/// Represents an HTTP response
 #[derive(Debug, Clone)]
 pub struct Response {
     pub url: Url,

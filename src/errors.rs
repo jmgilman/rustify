@@ -4,6 +4,7 @@ use url::ParseError;
 
 use crate::{client::Request, enums::RequestType};
 
+/// The general error type returned by this crate
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error("Error parsing endpoint into data")]

@@ -253,7 +253,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Generate Endpoint implementation
     s.gen_impl(quote! {
         use ::rustify::client::Client;
-        use ::rustify::endpoint::{Endpoint, EmptyEndpointData, EmptyEndpointResult};
+        use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
         use ::rustify::enums::RequestType;
         use ::rustify::errors::ClientError;
 
