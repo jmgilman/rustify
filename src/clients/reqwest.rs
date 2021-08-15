@@ -61,11 +61,9 @@ impl MiddleWare for DefaultMiddleWare {
 /// #[endpoint(path = "my/endpoint")]
 /// struct MyEndpoint {}
 ///
-/// fn main() {
-///     let client = ReqwestClient::default("http://myapi.com");
-///     let endpoint = MyEndpoint {};
-///     let result = endpoint.execute(&client);
-/// }
+/// let client = ReqwestClient::default("http://myapi.com");
+/// let endpoint = MyEndpoint {};
+/// let result = endpoint.execute(&client);
 /// ```
 ///
 /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html
@@ -106,7 +104,7 @@ impl ReqwestClient {
         ReqwestClient {
             base: base.to_string(),
             http: reqwest::blocking::Client::default(),
-            middle: middle,
+            middle,
         }
     }
 

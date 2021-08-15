@@ -16,7 +16,7 @@ fn test_path() {
     #[endpoint(path = "test/path")]
     struct Test {}
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path");
@@ -34,7 +34,7 @@ fn test_path_method() {
     #[endpoint(path = "test/path", method = "RequestType::POST")]
     struct Test {}
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(POST).path("/test/path");
@@ -55,7 +55,7 @@ fn test_path_method_with_format() {
         name: String,
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {
         name: "test".to_string(),
     };
@@ -77,7 +77,7 @@ fn test_path_method_with_data() {
         name: String,
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {
         name: "test".to_string(),
     };
@@ -104,7 +104,7 @@ fn test_path_result() {
         age: u8,
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path");
@@ -126,7 +126,7 @@ fn test_builder() {
         name: String,
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let m = t.server.mock(|when, then| {
         when.method(POST)
             .path("/test/path")
@@ -165,7 +165,7 @@ fn test_transform() {
         })
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path");
@@ -218,7 +218,7 @@ fn test_complex() {
         })
     }
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let m = t.server.mock(|when, then| {
         when.method(POST)
             .path("/test/path/test")

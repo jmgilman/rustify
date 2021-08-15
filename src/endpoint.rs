@@ -44,18 +44,16 @@ use url::Url;
 /// #[endpoint(path = "my/endpoint")]
 /// struct MyEndpoint {}
 ///
-/// fn main() {
-///     // Configure a client with a base URL of http://myapi.com
-///     let client = ReqwestClient::default("http://myapi.com");
+/// // Configure a client with a base URL of http://myapi.com
+/// let client = ReqwestClient::default("http://myapi.com");
 ///     
-///     // Construct a new instance of our Endpoint
-///     let endpoint = MyEndpoint {};
+/// // Construct a new instance of our Endpoint
+/// let endpoint = MyEndpoint {};
 ///
-///     // Execute our Endpoint using the client
-///     // This sends a GET request to http://myapi.com/my/endpoint
-///     // It assumes an empty response
-///     let result = endpoint.execute(&client);
-/// }
+/// // Execute our Endpoint using the client
+/// // This sends a GET request to http://myapi.com/my/endpoint
+/// // It assumes an empty response
+/// let result = endpoint.execute(&client);
 /// ```
 pub trait Endpoint: Debug + Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
@@ -87,7 +85,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         })?;
         url.path_segments_mut()
             .unwrap()
-            .extend(self.action().split("/"));
+            .extend(self.action().split('/'));
         Ok(url)
     }
 

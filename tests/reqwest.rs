@@ -16,7 +16,7 @@ fn test_server_error() {
     #[endpoint(path = "test/path")]
     struct Test {}
 
-    let t = TestServer::new();
+    let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path");
@@ -47,13 +47,13 @@ fn test_middleware() {
         }
     }
 
-    let c = ReqwestClient::with_middleware(
+    let client = ReqwestClient::with_middleware(
         "",
         Box::new(TestMiddleWare {
             value: "test".to_string(),
         }),
     );
-    let t = TestServer::with_client(c);
+    let t = TestServer::with_client(client);
     let e = Test {};
     let m = t.server.mock(|when, then| {
         when.method(GET)

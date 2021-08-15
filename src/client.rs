@@ -40,7 +40,7 @@ pub trait Client {
             return Err(ClientError::ServerResponseError {
                 url: response.url.to_string(),
                 code: response.code,
-                content: response.content.clone(),
+                content: response.content,
             });
         }
 

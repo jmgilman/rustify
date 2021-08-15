@@ -46,15 +46,13 @@
 //! use rustify_derive::Endpoint;
 //! use serde::Serialize;
 //!
-//! fn main() {
-//!     #[derive(Debug, Endpoint, Serialize)]
-//!     #[endpoint(path = "test/path")]
-//!     struct Test {}
+//! #[derive(Debug, Endpoint, Serialize)]
+//! #[endpoint(path = "test/path")]
+//! struct Test {}
 //!
-//!     let endpoint = Test {};
-//!     let client = ReqwestClient::default("http://!api.com");
-//!     let result = endpoint.execute(&client);
-//! }
+//! let endpoint = Test {};
+//! let client = ReqwestClient::default("http://!api.com");
+//! let result = endpoint.execute(&client);
 //! ```
 //!
 //! ## Advanced Usage

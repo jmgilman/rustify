@@ -7,19 +7,21 @@ pub struct TestServer {
 }
 
 impl TestServer {
-    pub fn new() -> TestServer {
+    pub fn with_client(mut client: ReqwestClient) -> TestServer {
         let server = MockServer::start();
-        let url = server.base_url().clone();
+        let url = server.base_url();
+        client.base = url;
+        TestServer { server, client }
+    }
+}
+
+impl Default for TestServer {
+    fn default() -> Self {
+        let server = MockServer::start();
+        let url = server.base_url();
         TestServer {
             server,
             client: ReqwestClient::default(url.as_str()),
         }
-    }
-
-    pub fn with_client(mut client: ReqwestClient) -> TestServer {
-        let server = MockServer::start();
-        let url = server.base_url().clone();
-        client.base = url;
-        TestServer { server, client }
     }
 }
