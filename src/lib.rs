@@ -41,6 +41,7 @@
 //! GET request to `http://!api.com/test/path` and expect an empty response:
 //!
 //! ```
+//! use rustify::clients::reqwest::ReqwestClient;
 //! use rustify::endpoint::Endpoint;
 //! use rustify_derive::Endpoint;
 //! use serde::Serialize;
@@ -53,7 +54,6 @@
 //!     let endpoint = Test {};
 //!     let client = ReqwestClient::default("http://!api.com");
 //!     let result = endpoint.execute(&client);
-//!     assert!(result.is_ok());
 //! }
 //! ```
 //!
@@ -64,6 +64,7 @@
 //!
 //! ```rust
 //! use derive_builder::Builder;
+//! use rustify::clients::reqwest::ReqwestClient;
 //! use rustify::{endpoint::Endpoint, errors::ClientError};
 //! use rustify_derive::Endpoint;
 //! use serde::{Deserialize, Serialize};
@@ -100,19 +101,23 @@
 //!
 //!     fn strip(res: String) -> Result<String, ClientError> {
 //!         let r: TestWrapper =
-//!             serde_json::from_str(res.as_str()).map_err(|_| ClientError::GenericError {})?;
-//!         serde_json::to_string(&r.result).map_err(|_| ClientError::GenericError {})
+//!             serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
+//!                 source: Box::new(e),
+//!             })?;
+//!         serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
+//!             source: Box::new(e),
+//!             })
 //!     }
 //!
 //!     let client = ReqwestClient::default("http://!api.com");
 //!     let result = Test::builder().name("test").kind("test").execute(&client);
 //!
-//!     assert!(result.is_ok());
+//! }
 //! ```
 //!
 //! Breaking this down:
 //!
-//! ```
+//! ```ignore
 //!     #[endpoint(
 //!         path = "test/path/{self.name}",
 //!         method = "RequestType::POST",
@@ -153,14 +158,14 @@
 //! optional fields as needed and which don't get serialized when not specified
 //! when building. For example:
 //!
-//! ```
-//! //! Errors, `kind` field is required
+//! ```ignore
+//! // Errors, `kind` field is required
 //! let result = Test::builder().name("test").execute(&client);
 //!
-//! //! Produces POST http://!api.com/test/path/test {"kind": "test"}
+//! // Produces POST http://!api.com/test/path/test {"kind": "test"}
 //! let result = Test::builder().name("test").kind("test").execute(&client);
 //!
-//! //! Produces POST http://!api.com/test/path/test {"kind": "test", "optional": "yes"}
+//! // Produces POST http://!api.com/test/path/test {"kind": "test", "optional": "yes"}
 //! let result = Test::builder().name("test").kind("test").optional("yes").execute(&client);
 //! ```
 //!

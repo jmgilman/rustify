@@ -55,7 +55,6 @@ use url::Url;
 ///     // This sends a GET request to http://myapi.com/my/endpoint
 ///     // It assumes an empty response
 ///     let result = endpoint.execute(&client);
-///     assert!(result.is_ok());
 /// }
 /// ```
 pub trait Endpoint: Debug + Serialize + Sized {

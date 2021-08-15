@@ -1,13 +1,20 @@
 [package]
 name = "rustify"
 version = "0.1.0"
+authors = ["Joshua Gilman <joshuagilman@gmail.com>"]
+description = "A Rust crate which provides an abstraction layer over HTTP REST API endpoints."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/jmgilman/rustify"
+keywords = ["REST", "HTTP", "API", "endpoint", "client"]
+categories = ["web-programming::http-client"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 log = "0.4.14"
-reqwest = { version = "0.11.4", features = ["blocking", "json"] }
+reqwest = { version = "0.11.4", features = ["blocking"] }
 rustify_derive = { path = "rustify_derive" }
 serde = { version = "1.0.127", features = ["derive"] }
 serde_json = "1.0.66"
