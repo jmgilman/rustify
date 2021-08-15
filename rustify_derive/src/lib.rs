@@ -202,7 +202,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     };
     let method = match params.method {
         Some(m) => m,
-        None => syn::parse_str("RequestType::GET").unwrap(),
+        None => syn::parse_str("GET").unwrap(),
     };
     let result = match params.result {
         Some(r) => r,
@@ -267,7 +267,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             }
 
             fn method(&self) -> RequestType {
-                #method
+                RequestType::#method
             }
 
             #transform

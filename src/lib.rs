@@ -73,7 +73,7 @@
 //!     #[derive(Builder, Debug, Default, Endpoint, Serialize)]
 //!     #[endpoint(
 //!         path = "test/path/{self.name}",
-//!         method = "RequestType::POST",
+//!         method = "POST",
 //!         result = "TestResponse",
 //!         transform = "strip",
 //!         builder = "true"
@@ -118,7 +118,7 @@
 //! ```ignore
 //!     #[endpoint(
 //!         path = "test/path/{self.name}",
-//!         method = "RequestType::POST",
+//!         method = "POST",
 //!         result = "TestResponse",
 //!         transform = "strip",
 //!         builder = "true"

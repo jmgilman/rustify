@@ -31,7 +31,7 @@ fn test_path() {
 #[test]
 fn test_path_method() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", method = "RequestType::POST")]
+    #[endpoint(path = "test/path", method = "POST")]
     struct Test {}
 
     let t = TestServer::default();
@@ -49,7 +49,7 @@ fn test_path_method() {
 #[test]
 fn test_path_method_with_format() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path/{self.name}", method = "RequestType::POST")]
+    #[endpoint(path = "test/path/{self.name}", method = "POST")]
     struct Test {
         #[serde(skip)]
         name: String,
@@ -72,7 +72,7 @@ fn test_path_method_with_format() {
 #[test]
 fn test_path_method_with_data() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", method = "RequestType::POST")]
+    #[endpoint(path = "test/path", method = "POST")]
     struct Test {
         name: String,
     }
@@ -120,7 +120,7 @@ fn test_path_result() {
 #[test]
 fn test_builder() {
     #[derive(Builder, Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", method = "RequestType::POST", builder = "true")]
+    #[endpoint(path = "test/path", method = "POST", builder = "true")]
     #[builder(setter(into))]
     struct Test {
         name: String,
@@ -184,7 +184,7 @@ fn test_complex() {
     #[derive(Builder, Debug, Default, Endpoint, Serialize)]
     #[endpoint(
         path = "test/path/{self.name}",
-        method = "RequestType::POST",
+        method = "POST",
         result = "TestResponse",
         transform = "strip",
         builder = "true"
