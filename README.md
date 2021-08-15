@@ -86,7 +86,7 @@ fn test_complex() {
     #[derive(Builder, Debug, Default, Endpoint, Serialize)]
     #[endpoint(
         path = "test/path/{self.name}",
-        method = "RequestType::POST",
+        method = "POST",
         result = "TestResponse",
         transform = "strip",
         builder = "true"
@@ -112,14 +112,18 @@ fn test_complex() {
 
     fn strip(res: String) -> Result<String, ClientError> {
         let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|_| ClientError::GenericError {})?;
-        serde_json::to_string(&r.result).map_err(|_| ClientError::GenericError {})
+            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
+                source: Box::new(e),
+            })?;
+        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
+            source: Box::new(e),
     }
 
     let client = ReqwestClient::default("http://api.com");
     let result = Test::builder().name("test").kind("test").execute(&client);
 
     assert!(result.is_ok());
+}
 ```
 
 Breaking this down:
