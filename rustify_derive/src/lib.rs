@@ -1,13 +1,15 @@
+//! Provides a derive macro for easily implementing an Endpoint from the
+//! `rustify` crate. See the documentation for `rustify` for details on how
+//! to use this macro.
+
 #[macro_use]
 extern crate synstructure;
-
 extern crate proc_macro;
-
-use std::ops::Deref;
 
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
+use std::ops::Deref;
 use syn::{self, spanned::Spanned};
 
 const MACRO_NAME: &str = "Endpoint";
