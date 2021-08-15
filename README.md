@@ -1,5 +1,11 @@
 # rustify
 
+<p align="center">
+    <a href="https://crates.io/crates/rustify"><img src="https://img.shields.io/crates/v/rustify"></a>
+    <a href="https://github.com/jmgilman/rustify/actions/workflows/default.yml"><img src="https://github.com/jmgilman/rustify/actions/workflows/default.yml/badge.svg"/></a>
+    <a href="https://docs.rs/rustify"><img src="https://img.shields.io/docsrs/rustify" /></a>
+</p>
+
 > A Rust crate which provides an abstraction layer over HTTP REST API endpoints
 
 Rustify is a small crate which provides a way to easily scaffold code which
