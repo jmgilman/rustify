@@ -7,6 +7,7 @@ pub struct TestServer {
 }
 
 impl TestServer {
+    #[allow(dead_code)]
     pub fn with_client(mut client: ReqwestClient) -> TestServer {
         let server = MockServer::start();
         let url = server.base_url();
