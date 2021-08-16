@@ -121,11 +121,10 @@ pub trait Endpoint: Debug + Serialize + Sized {
     ) -> Result<Option<Self::Response>, ClientError> {
         match res {
             Ok(r) => {
-                let r_conv_err = r.clone();
-                let r_parse_err = r.clone();
-                let c = String::from_utf8(r).map_err(|e| ClientError::ResponseParseError {
+                let r_err = r.clone();
+                let c = String::from_utf8(r).map_err(|e| ClientError::ResponseConversionError {
                     source: Box::new(e),
-                    content: r_conv_err,
+                    content: r_err,
                 })?;
 
                 log::info!("Parsing JSON result from string");
@@ -136,7 +135,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
                     false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
                         ClientError::ResponseParseError {
                             source: Box::new(e),
-                            content: r_parse_err,
+                            content: c.clone(),
                         }
                     })?)),
                     true => Ok(None),

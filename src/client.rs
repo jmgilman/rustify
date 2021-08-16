@@ -1,8 +1,9 @@
 use crate::{enums::RequestType, errors::ClientError};
+use std::ops::RangeInclusive;
 use url::Url;
 
 /// An array of HTTP response codes which indicate a successful response
-const HTTP_SUCCESS_CODES: [u16; 2] = [200, 204];
+const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
 
 /// Represents an HTTP client which is capable of executing
 /// [Endpoints][crate::endpoint::Endpoint] by sending the [Request] generated
@@ -40,7 +41,7 @@ pub trait Client {
             return Err(ClientError::ServerResponseError {
                 url: response.url.to_string(),
                 code: response.code,
-                content: response.content,
+                content: String::from_utf8(response.content).ok(),
             });
         }
 
