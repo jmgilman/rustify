@@ -1,4 +1,4 @@
-use crate::{client::Request, enums::RequestType, errors::ClientError};
+use crate::{client::Request, enums::RequestMethod, errors::ClientError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
@@ -69,7 +69,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
     fn action(&self) -> String;
 
     /// The HTTP method to be used when executing this Endpoint.
-    fn method(&self) -> RequestType;
+    fn method(&self) -> RequestMethod;
 
     /// Optional query parameters to add to the request
     fn query(&self) -> Vec<(String, Value)> {

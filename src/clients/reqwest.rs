@@ -1,4 +1,4 @@
-use crate::{client::Client, enums::RequestType, errors::ClientError};
+use crate::{client::Client, enums::RequestMethod, errors::ClientError};
 use reqwest::Method;
 use serde_json::Value;
 use std::str::FromStr;
@@ -111,22 +111,22 @@ impl ReqwestClient {
 
     fn build_request(
         &self,
-        method: &RequestType,
+        method: &RequestMethod,
         url: &Url,
         query: &[(String, Value)],
         data: Vec<u8>,
     ) -> Result<reqwest::blocking::Request, ClientError> {
         let builder = match method {
-            RequestType::DELETE => match data.is_empty() {
+            RequestMethod::DELETE => match data.is_empty() {
                 false => self.http.delete(url.as_ref()).body(data),
                 true => self.http.delete(url.as_ref()),
             },
-            RequestType::GET => self.http.get(url.as_ref()),
-            RequestType::HEAD => match data.is_empty() {
+            RequestMethod::GET => self.http.get(url.as_ref()),
+            RequestMethod::HEAD => match data.is_empty() {
                 false => self.http.head(url.as_ref()).body(data),
                 true => self.http.head(url.as_ref()),
             },
-            RequestType::LIST => match data.is_empty() {
+            RequestMethod::LIST => match data.is_empty() {
                 false => self
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref())
@@ -135,7 +135,7 @@ impl ReqwestClient {
                     .http
                     .request(Method::from_str("LIST").unwrap(), url.as_ref()),
             },
-            RequestType::POST => match data.is_empty() {
+            RequestMethod::POST => match data.is_empty() {
                 false => self.http.post(url.as_ref()).body(data),
                 true => self.http.post(url.as_ref()),
             },

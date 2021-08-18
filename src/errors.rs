@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use thiserror::Error;
 use url::ParseError;
 
-use crate::{client::Request, enums::RequestType};
+use crate::{client::Request, enums::RequestMethod};
 
 /// The general error type returned by this crate
 #[derive(Error, Debug)]
@@ -21,7 +21,7 @@ pub enum ClientError {
     #[error("Error building HTTP request")]
     RequestBuildError {
         source: Box<dyn StdError>,
-        method: RequestType,
+        method: RequestMethod,
         url: String,
     },
     #[error("Error retrieving HTTP response")]

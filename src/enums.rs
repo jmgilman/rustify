@@ -1,6 +1,6 @@
 /// Represents a HTTP request method
 #[derive(Clone, Debug)]
-pub enum RequestType {
+pub enum RequestMethod {
     DELETE,
     GET,
     HEAD,

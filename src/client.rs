@@ -1,4 +1,4 @@
-use crate::{enums::RequestType, errors::ClientError};
+use crate::{enums::RequestMethod, errors::ClientError};
 use serde_json::Value;
 use std::ops::RangeInclusive;
 use url::Url;
@@ -55,7 +55,7 @@ pub trait Client {
 #[derive(Debug, Clone)]
 pub struct Request {
     pub url: Url,
-    pub method: RequestType,
+    pub method: RequestMethod,
     pub query: Vec<(String, Value)>,
     pub data: Vec<u8>,
 }

@@ -294,7 +294,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         const #const_ident: () = {
             use ::rustify::client::Client;
             use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
-            use ::rustify::enums::RequestType;
+            use ::rustify::enums::RequestMethod;
             use ::rustify::errors::ClientError;
             use ::serde_json::Value;
 
@@ -305,8 +305,8 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                     #action
                 }
 
-                fn method(&self) -> RequestType {
-                    RequestType::#method
+                fn method(&self) -> RequestMethod {
+                    RequestMethod::#method
                 }
 
                 #query
