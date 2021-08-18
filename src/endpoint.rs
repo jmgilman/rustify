@@ -60,7 +60,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
     /// automatically be deserialized to. This type must implement
     /// [serde::Deserialize].
-    type Response: DeserializeOwned;
+    type Result: DeserializeOwned;
 
     /// The relative URL path that represents the location of this Endpoint.
     /// This is combined with the base URL from a
@@ -101,7 +101,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
     fn execute<C: crate::client::Client>(
         &self,
         client: &C,
-    ) -> Result<Option<Self::Response>, ClientError> {
+    ) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
@@ -130,7 +130,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
     fn parse(
         &self,
         res: Result<Vec<u8>, ClientError>,
-    ) -> Result<Option<Self::Response>, ClientError> {
+    ) -> Result<Option<Self::Result>, ClientError> {
         match res {
             Ok(r) => {
                 let r_err = r.clone();

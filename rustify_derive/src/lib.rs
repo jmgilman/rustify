@@ -299,7 +299,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             use ::serde_json::Value;
 
             impl #impl_generics Endpoint for #id #ty_generics #where_clause {
-                type Response = #result;
+                type Result = #result;
 
                 fn action(&self) -> String {
                     #action
