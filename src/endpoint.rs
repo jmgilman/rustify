@@ -1,5 +1,6 @@
 use crate::{client::Request, enums::RequestType, errors::ClientError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Value;
 use std::fmt::Debug;
 use url::Url;
 
@@ -70,6 +71,11 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// The HTTP method to be used when executing this Endpoint.
     fn method(&self) -> RequestType;
 
+    /// Optional query parameters to add to the request
+    fn query(&self) -> Vec<(String, Value)> {
+        Vec::new()
+    }
+
     /// Combines the given base URL with the relative URL path from this
     /// Endpoint to create a fully qualified URL.
     fn build_url(&self, base: &str) -> Result<url::Url, ClientError> {
@@ -101,6 +107,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
         let url = self.build_url(client.base())?;
         let method = self.method();
+        let query = self.query();
         let data = serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
             source: Box::new(e),
         })?;
@@ -110,7 +117,12 @@ pub trait Endpoint: Debug + Serialize + Sized {
             _ => data,
         }
         .into_bytes();
-        self.parse(client.execute(Request { url, method, data }))
+        self.parse(client.execute(Request {
+            url,
+            method,
+            query,
+            data,
+        }))
     }
 
     /// Parses the raw response from executing the endpoint into a response type

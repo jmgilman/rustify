@@ -1,5 +1,6 @@
 use crate::{client::Client, enums::RequestType, errors::ClientError};
 use reqwest::Method;
+use serde_json::Value;
 use std::str::FromStr;
 use url::Url;
 
@@ -112,6 +113,7 @@ impl ReqwestClient {
         &self,
         method: &RequestType,
         url: &Url,
+        query: &[(String, Value)],
         data: Vec<u8>,
     ) -> Result<reqwest::blocking::Request, ClientError> {
         let builder = match method {
@@ -139,6 +141,7 @@ impl ReqwestClient {
             },
         };
         let req = builder
+            .query(query)
             .build()
             .map_err(|e| ClientError::RequestBuildError {
                 source: Box::new(e),
@@ -155,7 +158,7 @@ impl Client for ReqwestClient {
     }
 
     fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError> {
-        let request = self.build_request(&req.method, &req.url, req.data.clone())?;
+        let request = self.build_request(&req.method, &req.url, &req.query, req.data.clone())?;
         let response = self
             .http
             .execute(request)

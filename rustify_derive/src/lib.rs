@@ -14,6 +14,7 @@ use syn::{self, spanned::Spanned, Ident};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
+const QUERY_NAME: &str = "query";
 
 #[derive(Debug)]
 struct Error(proc_macro2::TokenStream);
@@ -218,6 +219,37 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         Err(e) => return e.into_tokens(),
     };
 
+    // Gather any query parameters
+    let mut query_params: Vec<proc_macro2::TokenStream> = Vec::new();
+    if let syn::Data::Struct(data) = &s.ast().data {
+        for field in data.fields.iter() {
+            if field.ident.clone().unwrap() == QUERY_NAME {
+                let id = &field.ident;
+                let id_str = field.ident.as_ref().unwrap().to_string();
+                let expr = quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) };
+                query_params.push(expr);
+            } else {
+                for attr in field.attrs.iter() {
+                    if attr.path.is_ident(QUERY_NAME) {
+                        let id = &field.ident;
+                        let id_str = field.ident.as_ref().unwrap().to_string();
+                        let expr = quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) };
+                        query_params.push(expr);
+                    }
+                }
+            }
+        }
+    }
+
+    let query = match query_params.is_empty() {
+        false => quote! {
+            fn query(&self) -> Vec<(String, Value)> {
+                vec!(#(#query_params),*)
+            }
+        },
+        true => quote! {},
+    };
+
     // Optional post transformation method
     let transform = match params.transform {
         Some(t) => quote! {
@@ -264,6 +296,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
             use ::rustify::enums::RequestType;
             use ::rustify::errors::ClientError;
+            use ::serde_json::Value;
 
             impl #impl_generics Endpoint for #id #ty_generics #where_clause {
                 type Response = #result;
@@ -276,6 +309,8 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                     RequestType::#method
                 }
 
+                #query
+
                 #transform
             }
 
@@ -284,4 +319,4 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     }
 }
 
-synstructure::decl_derive!([Endpoint, attributes(endpoint, data)] => endpoint_derive);
+synstructure::decl_derive!([Endpoint, attributes(endpoint, query)] => endpoint_derive);

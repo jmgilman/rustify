@@ -49,6 +49,37 @@ fn test_path_method() {
 }
 
 #[test]
+fn test_path_query() {
+    #[derive(Debug, Endpoint, Serialize)]
+    #[endpoint(path = "test/path", method = "POST")]
+    struct Test {
+        #[serde(skip)]
+        #[query]
+        pub name: String,
+        #[serde(skip)]
+        #[query]
+        pub age: u64,
+    }
+
+    let t = TestServer::default();
+    let e = Test {
+        name: "test".to_string(),
+        age: 30,
+    };
+    let m = t.server.mock(|when, then| {
+        when.method(POST)
+            .path("/test/path")
+            .query_param_exists("name")
+            .query_param_exists("age");
+        then.status(200);
+    });
+    let r = e.execute(&t.client);
+
+    m.assert();
+    assert!(r.is_ok());
+}
+
+#[test]
 fn test_path_method_with_format() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
