@@ -1,11 +1,13 @@
 mod common;
 
+use std::{fmt::Debug, marker::PhantomData};
+
 use common::TestServer;
 use derive_builder::Builder;
 use httpmock::prelude::*;
 use rustify::{endpoint::Endpoint, errors::ClientError};
 use rustify_derive::Endpoint;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use serde_with::skip_serializing_none;
 use test_env_log::test;
@@ -176,6 +178,67 @@ fn test_transform() {
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().age, 30);
+}
+
+#[test]
+fn test_generic() {
+    #[skip_serializing_none]
+    #[derive(Builder, Debug, Endpoint, Serialize)]
+    #[endpoint(
+        path = "test/path/{self.name}",
+        result = "TestResponse<T>",
+        transform = "strip::<TestResponse<T>>"
+    )]
+    #[builder(setter(into, strip_option))]
+    struct Test<T: DeserializeOwned + Serialize + Debug> {
+        #[serde(skip)]
+        name: String,
+        #[serde(skip)]
+        #[builder(default = "None", setter(skip))]
+        data: Option<PhantomData<*const T>>,
+    }
+
+    #[derive(Clone, Debug, Serialize, Deserialize)]
+    struct TestData {
+        age: u8,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct TestResponse<T> {
+        data: T,
+        version: u8,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct TestWrapper<T> {
+        result: T,
+    }
+
+    fn strip<T: DeserializeOwned + Serialize>(res: String) -> Result<String, ClientError> {
+        let r: TestWrapper<T> =
+            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
+                source: Box::new(e),
+            })?;
+        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
+            source: Box::new(e),
+        })
+    }
+
+    let t = TestServer::default();
+    let m = t.server.mock(|when, then| {
+        when.method(GET).path("/test/path/test");
+        then.status(200)
+            .json_body(json!({"result": {"data": {"age": 30}, "version": 1}}));
+    });
+    let r: Result<Option<TestResponse<TestData>>, ClientError> = TestBuilder::default()
+        .name("test")
+        .build()
+        .unwrap()
+        .execute(&t.client);
+
+    m.assert();
+    assert!(r.is_ok());
+    assert_eq!(r.unwrap().unwrap().data.age, 30);
 }
 
 #[test]

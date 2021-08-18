@@ -10,7 +10,7 @@ use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
 use std::ops::Deref;
-use syn::{self, spanned::Spanned};
+use syn::{self, spanned::Spanned, Ident};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
@@ -209,6 +209,9 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         None => syn::parse_str("EmptyEndpointResult").unwrap(),
     };
 
+    // Capture generic information
+    let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
+
     // Hacky variable substitution
     let action = match gen_action(&path) {
         Ok(a) => a,
@@ -234,13 +237,13 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             .unwrap();
     let builder = match params.builder {
         Some(_) => quote! {
-            impl #id {
-                pub fn builder() -> #builder_id {
+            impl #impl_generics #id #ty_generics #where_clause {
+                pub fn builder() -> #builder_id #ty_generics {
                     #builder_func
                 }
             }
 
-            impl #builder_id {
+            impl #impl_generics #builder_id #ty_generics #where_clause {
                 pub fn execute<C: Client>(
                     &self,
                     client: &C,
@@ -253,28 +256,32 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     };
 
     // Generate Endpoint implementation
-    s.gen_impl(quote! {
-        use ::rustify::client::Client;
-        use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
-        use ::rustify::enums::RequestType;
-        use ::rustify::errors::ClientError;
+    let const_name = format!("_DERIVE_Endpoint_FOR_{}", id.to_string());
+    let const_ident = Ident::new(const_name.as_str(), Span::call_site());
+    quote! {
+        const #const_ident: () = {
+            use ::rustify::client::Client;
+            use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
+            use ::rustify::enums::RequestType;
+            use ::rustify::errors::ClientError;
 
-        gen impl Endpoint for @Self {
-            type Response = #result;
+            impl #impl_generics Endpoint for #id #ty_generics #where_clause {
+                type Response = #result;
 
-            fn action(&self) -> String {
-                #action
+                fn action(&self) -> String {
+                    #action
+                }
+
+                fn method(&self) -> RequestType {
+                    RequestType::#method
+                }
+
+                #transform
             }
 
-            fn method(&self) -> RequestType {
-                RequestType::#method
-            }
-
-            #transform
-        }
-
-        #builder
-    })
+            #builder
+        };
+    }
 }
 
 synstructure::decl_derive!([Endpoint, attributes(endpoint, data)] => endpoint_derive);
