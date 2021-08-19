@@ -1,5 +1,5 @@
 use crate::{
-    client::Request,
+    client::{Client, Request, Response},
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
@@ -66,7 +66,10 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// [serde::Deserialize].
     type Result: DeserializeOwned;
 
+    /// The content type of the request body
     const REQUEST_BODY_TYPE: RequestType;
+
+    /// The content type of the response body
     const RESPONSE_BODY_TYPE: ResponseType;
 
     /// The relative URL path that represents the location of this Endpoint.
@@ -83,42 +86,33 @@ pub trait Endpoint: Debug + Serialize + Sized {
         Vec::new()
     }
 
-    /// Executes the Endpoint using the given [Client][crate::client::Client]
-    /// and returns the deserialized response as defined by
-    /// [Endpoint::Response].
-    fn execute<C: crate::client::Client>(
+    /// Executes the Endpoint using the given [Client] and returns the
+    /// deserialized response as defined by [Endpoint::Result].
+    fn execute<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
+        log::info!("Executing endpoint");
+        log::debug! {"Endpoint: {:#?}", self};
+
+        let req = build_request(self, client.base())?;
+        let resp = client.execute(req)?;
+        parse(self, resp)
+    }
+
+    /// Executes the Endpoint using the given [Client] and [MiddleWare],
+    /// returning the deserialized response as defined by [Endpoint::Result].
+    fn execute_m<C: Client, M: MiddleWare>(
         &self,
         client: &C,
+        middle: &M,
     ) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let url = build_url(self, client.base())?;
-        let method = self.method();
-        let query = self.query();
-        let body = match Self::REQUEST_BODY_TYPE {
-            RequestType::JSON => {
-                let parse_data =
-                    serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
-                        source: Box::new(e),
-                    })?;
-                match parse_data.as_str() {
-                    "null" => "".to_string(),
-                    "{}" => "".to_string(),
-                    _ => parse_data,
-                }
-            }
-        };
+        let mut req = build_request(self, client.base())?;
+        middle.request(self, &mut req);
 
-        parse(
-            self,
-            client.execute(Request {
-                url,
-                method,
-                query,
-                body: body.into_bytes(),
-            }),
-        )
+        let mut resp = client.execute(req)?;
+        middle.response(self, &mut resp);
+        parse(self, resp)
     }
 
     /// Can be overriden by implementations in order to operate on the raw
@@ -127,6 +121,38 @@ pub trait Endpoint: Debug + Serialize + Sized {
     fn transform(&self, res: String) -> Result<String, ClientError> {
         Ok(res)
     }
+}
+
+pub trait MiddleWare {
+    fn request<E: Endpoint>(&self, endpoint: &E, req: &mut Request);
+    fn response<E: Endpoint>(&self, endpoint: &E, req: &mut Response);
+}
+
+/// Builds a [Request] using the given [Endpoint] and base URL
+fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, ClientError> {
+    let url = build_url(endpoint, base)?;
+    let method = endpoint.method();
+    let query = endpoint.query();
+    let body = match E::REQUEST_BODY_TYPE {
+        RequestType::JSON => {
+            let parse_data =
+                serde_json::to_string(endpoint).map_err(|e| ClientError::DataParseError {
+                    source: Box::new(e),
+                })?;
+            match parse_data.as_str() {
+                "null" => "".to_string(),
+                "{}" => "".to_string(),
+                _ => parse_data,
+            }
+        }
+    };
+
+    Ok(Request {
+        url,
+        method,
+        query,
+        body: body.into_bytes(),
+    })
 }
 
 /// Combines the given base URL with the relative URL path from this
@@ -150,11 +176,8 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
 
 /// Parses the raw response from executing the endpoint into a response type
 /// as defined by [Endpoint::Response].
-fn parse<E: Endpoint>(
-    endpoint: &E,
-    res: Result<Vec<u8>, ClientError>,
-) -> Result<Option<E::Result>, ClientError> {
-    let body = res?;
+fn parse<E: Endpoint>(endpoint: &E, resp: Response) -> Result<Option<E::Result>, ClientError> {
+    let body = resp.content;
     match body.is_empty() {
         false => match E::RESPONSE_BODY_TYPE {
             ResponseType::JSON => {

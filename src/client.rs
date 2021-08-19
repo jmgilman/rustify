@@ -21,7 +21,7 @@ pub trait Client {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    fn execute(&self, req: Request) -> Result<Vec<u8>, ClientError> {
+    fn execute(&self, req: Request) -> Result<Response, ClientError> {
         log::info!(
             "Client sending {:#?} request to {} with {} bytes of data",
             req.method,
@@ -47,7 +47,7 @@ pub trait Client {
         }
 
         // Parse response content
-        Ok(response.content)
+        Ok(response)
     }
 }
 
