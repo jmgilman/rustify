@@ -1,5 +1,8 @@
 use crate::{client::Client, enums::RequestMethod, errors::ClientError};
-use reqwest::Method;
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Method,
+};
 use serde_json::Value;
 use std::str::FromStr;
 use url::Url;
@@ -114,6 +117,7 @@ impl ReqwestClient {
         method: &RequestMethod,
         url: &Url,
         query: &[(String, Value)],
+        headers: &[(String, String)],
         data: Vec<u8>,
     ) -> Result<reqwest::blocking::Request, ClientError> {
         let builder = match method {
@@ -140,14 +144,22 @@ impl ReqwestClient {
                 true => self.http.post(url.as_ref()),
             },
         };
-        let req = builder
-            .query(query)
-            .build()
-            .map_err(|e| ClientError::RequestBuildError {
+
+        let mut map = HeaderMap::new();
+        headers.iter().for_each(|h| {
+            map.insert(
+                HeaderName::from_str(h.0.as_str()).unwrap(),
+                HeaderValue::from_str(h.1.as_str()).unwrap(),
+            );
+        });
+
+        let req = builder.query(query).headers(map).build().map_err(|e| {
+            ClientError::RequestBuildError {
                 source: Box::new(e),
                 url: url.to_string(),
                 method: method.clone(),
-            })?;
+            }
+        })?;
         Ok(self.middle.handle(req))
     }
 }
@@ -158,7 +170,8 @@ impl Client for ReqwestClient {
     }
 
     fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError> {
-        let request = self.build_request(&req.method, &req.url, &req.query, req.body)?;
+        let request =
+            self.build_request(&req.method, &req.url, &req.query, &req.headers, req.body)?;
 
         let err_url = req.url;
         let err_method = req.method;

@@ -133,6 +133,7 @@ fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, Clien
     let url = build_url(endpoint, base)?;
     let method = endpoint.method();
     let query = endpoint.query();
+    let headers = Vec::new();
     let body = match E::REQUEST_BODY_TYPE {
         RequestType::JSON => {
             let parse_data =
@@ -151,6 +152,7 @@ fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, Clien
         url,
         method,
         query,
+        headers,
         body: body.into_bytes(),
     })
 }

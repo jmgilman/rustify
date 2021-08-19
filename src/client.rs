@@ -57,6 +57,7 @@ pub struct Request {
     pub url: Url,
     pub method: RequestMethod,
     pub query: Vec<(String, Value)>,
+    pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
 }
 
