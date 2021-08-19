@@ -26,7 +26,7 @@ pub trait Client {
             "Client sending {:#?} request to {} with {} bytes of data",
             req.method,
             req.url,
-            req.data.len()
+            req.body.len()
         );
         let response = self.send(req)?;
 
@@ -57,7 +57,7 @@ pub struct Request {
     pub url: Url,
     pub method: RequestMethod,
     pub query: Vec<(String, Value)>,
-    pub data: Vec<u8>,
+    pub body: Vec<u8>,
 }
 
 /// Represents an HTTP response

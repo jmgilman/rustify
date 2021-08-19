@@ -96,7 +96,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         let url = build_url(self, client.base())?;
         let method = self.method();
         let query = self.query();
-        let data = match Self::REQUEST_BODY_TYPE {
+        let body = match Self::REQUEST_BODY_TYPE {
             RequestType::JSON => {
                 let parse_data =
                     serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
@@ -116,7 +116,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
                 url,
                 method,
                 query,
-                data: data.into_bytes(),
+                body: body.into_bytes(),
             }),
         )
     }

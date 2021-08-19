@@ -158,7 +158,7 @@ impl Client for ReqwestClient {
     }
 
     fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError> {
-        let request = self.build_request(&req.method, &req.url, &req.query, req.data.clone())?;
+        let request = self.build_request(&req.method, &req.url, &req.query, req.body.clone())?;
         let response = self
             .http
             .execute(request)
