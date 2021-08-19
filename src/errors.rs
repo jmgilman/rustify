@@ -16,7 +16,8 @@ pub enum ClientError {
     #[error("Error sending HTTP request")]
     RequestError {
         source: Box<dyn StdError>,
-        request: Request,
+        url: String,
+        method: RequestMethod,
     },
     #[error("Error building HTTP request")]
     RequestBuildError {
