@@ -3,7 +3,7 @@ use crate::{
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
 use url::Url;
@@ -182,7 +182,3 @@ fn parse<E: Endpoint>(
         true => Ok(None),
     }
 }
-
-/// Represents an empty Endpoint result.
-#[derive(Deserialize, Debug)]
-pub struct EmptyEndpointResult {}

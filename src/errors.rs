@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use thiserror::Error;
 use url::ParseError;
 
-use crate::{client::Request, enums::RequestMethod};
+use crate::enums::RequestMethod;
 
 /// The general error type returned by this crate
 #[derive(Error, Debug)]

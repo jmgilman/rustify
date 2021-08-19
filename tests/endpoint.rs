@@ -161,10 +161,8 @@ fn test_builder() {
 
     let t = TestServer::default();
     let m = t.server.mock(|when, then| {
-        when.method(POST)
-            .path("/test/path")
-            .json_body(json!({ "name": "test" }));
-        then.status(200).json_body(json!({"age": 30}));
+        when.method(POST).path("/test/path");
+        then.status(200);
     });
     let r = Test::builder().name("test").execute(&t.client);
 

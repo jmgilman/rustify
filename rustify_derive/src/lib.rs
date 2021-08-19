@@ -219,7 +219,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     };
     let result = match params.result {
         Some(r) => r,
-        None => syn::parse_str("EmptyEndpointResult").unwrap(),
+        None => syn::parse_str("()").unwrap(),
     };
     let request_type = match params.request_type {
         Some(r) => r,
@@ -313,7 +313,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     quote! {
         const #const_ident: () = {
             use ::rustify::client::Client;
-            use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
+            use ::rustify::endpoint::Endpoint;
             use ::rustify::enums::{RequestMethod, RequestType, ResponseType};
             use ::rustify::errors::ClientError;
             use ::serde_json::Value;
