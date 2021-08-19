@@ -42,6 +42,8 @@ struct Parameters {
     path: Option<syn::LitStr>,
     method: Option<syn::Expr>,
     result: Option<syn::Type>,
+    request_type: Option<syn::Expr>,
+    response_type: Option<syn::Expr>,
     transform: Option<syn::Expr>,
     builder: Option<bool>,
 }
@@ -99,6 +101,16 @@ fn parse_attr(meta: &syn::Meta) -> Result<Parameters, Error> {
                     }
                     "result" => {
                         params.result = Some(val.deref().clone().parse().map_err(|_| {
+                            Error::new(arg.lit.span(), "Unable to parse value into expression")
+                        })?);
+                    }
+                    "request_type" => {
+                        params.request_type = Some(val.deref().clone().parse().map_err(|_| {
+                            Error::new(arg.lit.span(), "Unable to parse value into expression")
+                        })?);
+                    }
+                    "response_type" => {
+                        params.response_type = Some(val.deref().clone().parse().map_err(|_| {
                             Error::new(arg.lit.span(), "Unable to parse value into expression")
                         })?);
                     }
@@ -209,6 +221,14 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         Some(r) => r,
         None => syn::parse_str("EmptyEndpointResult").unwrap(),
     };
+    let request_type = match params.request_type {
+        Some(r) => r,
+        None => syn::parse_str("JSON").unwrap(),
+    };
+    let response_type = match params.response_type {
+        Some(r) => r,
+        None => syn::parse_str("JSON").unwrap(),
+    };
 
     // Capture generic information
     let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
@@ -294,12 +314,14 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         const #const_ident: () = {
             use ::rustify::client::Client;
             use ::rustify::endpoint::{Endpoint, EmptyEndpointResult};
-            use ::rustify::enums::RequestMethod;
+            use ::rustify::enums::{RequestMethod, RequestType, ResponseType};
             use ::rustify::errors::ClientError;
             use ::serde_json::Value;
 
             impl #impl_generics Endpoint for #id #ty_generics #where_clause {
                 type Result = #result;
+                const REQUEST_BODY_TYPE: RequestType = RequestType::#request_type;
+                const RESPONSE_BODY_TYPE: ResponseType = ResponseType::#response_type;
 
                 fn action(&self) -> String {
                     #action

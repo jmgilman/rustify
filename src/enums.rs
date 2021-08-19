@@ -7,3 +7,13 @@ pub enum RequestMethod {
     LIST,
     POST,
 }
+
+#[derive(Clone, Debug)]
+pub enum RequestType {
+    JSON,
+}
+
+#[derive(Clone, Debug)]
+pub enum ResponseType {
+    JSON,
+}

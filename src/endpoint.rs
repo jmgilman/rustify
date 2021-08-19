@@ -1,4 +1,8 @@
-use crate::{client::Request, enums::RequestMethod, errors::ClientError};
+use crate::{
+    client::Request,
+    enums::{RequestMethod, RequestType, ResponseType},
+    errors::ClientError,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
@@ -62,6 +66,9 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// [serde::Deserialize].
     type Result: DeserializeOwned;
 
+    const REQUEST_BODY_TYPE: RequestType;
+    const RESPONSE_BODY_TYPE: ResponseType;
+
     /// The relative URL path that represents the location of this Endpoint.
     /// This is combined with the base URL from a
     /// [Client][crate::client::Client] instance to create the fully qualified
@@ -108,20 +115,25 @@ pub trait Endpoint: Debug + Serialize + Sized {
         let url = self.build_url(client.base())?;
         let method = self.method();
         let query = self.query();
-        let data = serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
-            source: Box::new(e),
-        })?;
-        let data = match data.as_str() {
-            "null" => "".to_string(),
-            "{}" => "".to_string(),
-            _ => data,
-        }
-        .into_bytes();
+        let data = match Self::REQUEST_BODY_TYPE {
+            RequestType::JSON => {
+                let parse_data =
+                    serde_json::to_string(self).map_err(|e| ClientError::DataParseError {
+                        source: Box::new(e),
+                    })?;
+                match parse_data.as_str() {
+                    "null" => "".to_string(),
+                    "{}" => "".to_string(),
+                    _ => parse_data,
+                }
+            }
+        };
+
         self.parse(client.execute(Request {
             url,
             method,
             query,
-            data,
+            data: data.into_bytes(),
         }))
     }
 
@@ -131,29 +143,33 @@ pub trait Endpoint: Debug + Serialize + Sized {
         &self,
         res: Result<Vec<u8>, ClientError>,
     ) -> Result<Option<Self::Result>, ClientError> {
-        match res {
-            Ok(r) => {
-                let r_err = r.clone();
-                let c = String::from_utf8(r).map_err(|e| ClientError::ResponseConversionError {
-                    source: Box::new(e),
-                    content: r_err,
-                })?;
-
-                log::info!("Parsing JSON result from string");
-                log::debug!("Content before transform: {}", c);
-                let c = self.transform(c)?;
-                log::debug!("Content after transform: {}", c);
-                match c.is_empty() {
-                    false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
-                        ClientError::ResponseParseError {
+        let body = res?;
+        match body.is_empty() {
+            false => match Self::RESPONSE_BODY_TYPE {
+                ResponseType::JSON => {
+                    let body_err = body.clone();
+                    let c = String::from_utf8(body).map_err(|e| {
+                        ClientError::ResponseConversionError {
                             source: Box::new(e),
-                            content: c.clone(),
+                            content: body_err,
                         }
-                    })?)),
-                    true => Ok(None),
+                    })?;
+                    log::info!("Parsing JSON result from string");
+                    log::debug!("Content before transform: {}", c);
+                    let c = self.transform(c)?;
+                    log::debug!("Content after transform: {}", c);
+                    match c.is_empty() {
+                        false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
+                            ClientError::ResponseParseError {
+                                source: Box::new(e),
+                                content: c.clone(),
+                            }
+                        })?)),
+                        true => Ok(None),
+                    }
                 }
-            }
-            Err(e) => Err(e),
+            },
+            true => Ok(None),
         }
     }
 
