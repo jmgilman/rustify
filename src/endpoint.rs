@@ -83,25 +83,6 @@ pub trait Endpoint: Debug + Serialize + Sized {
         Vec::new()
     }
 
-    /// Combines the given base URL with the relative URL path from this
-    /// Endpoint to create a fully qualified URL.
-    fn build_url(&self, base: &str) -> Result<url::Url, ClientError> {
-        log::info!(
-            "Building endpoint url from {} base URL and {} action",
-            base,
-            self.action()
-        );
-
-        let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
-            url: base.to_string(),
-            source: e,
-        })?;
-        url.path_segments_mut()
-            .unwrap()
-            .extend(self.action().split('/'));
-        Ok(url)
-    }
-
     /// Executes the Endpoint using the given [Client][crate::client::Client]
     /// and returns the deserialized response as defined by
     /// [Endpoint::Response].
@@ -112,7 +93,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let url = self.build_url(client.base())?;
+        let url = build_url(self, client.base())?;
         let method = self.method();
         let query = self.query();
         let data = match Self::REQUEST_BODY_TYPE {
@@ -129,48 +110,15 @@ pub trait Endpoint: Debug + Serialize + Sized {
             }
         };
 
-        self.parse(client.execute(Request {
-            url,
-            method,
-            query,
-            data: data.into_bytes(),
-        }))
-    }
-
-    /// Parses the raw response from executing the endpoint into a response type
-    /// as defined by [Endpoint::Response].
-    fn parse(
-        &self,
-        res: Result<Vec<u8>, ClientError>,
-    ) -> Result<Option<Self::Result>, ClientError> {
-        let body = res?;
-        match body.is_empty() {
-            false => match Self::RESPONSE_BODY_TYPE {
-                ResponseType::JSON => {
-                    let body_err = body.clone();
-                    let c = String::from_utf8(body).map_err(|e| {
-                        ClientError::ResponseConversionError {
-                            source: Box::new(e),
-                            content: body_err,
-                        }
-                    })?;
-                    log::info!("Parsing JSON result from string");
-                    log::debug!("Content before transform: {}", c);
-                    let c = self.transform(c)?;
-                    log::debug!("Content after transform: {}", c);
-                    match c.is_empty() {
-                        false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
-                            ClientError::ResponseParseError {
-                                source: Box::new(e),
-                                content: c.clone(),
-                            }
-                        })?)),
-                        true => Ok(None),
-                    }
-                }
-            },
-            true => Ok(None),
-        }
+        parse(
+            self,
+            client.execute(Request {
+                url,
+                method,
+                query,
+                data: data.into_bytes(),
+            }),
+        )
     }
 
     /// Can be overriden by implementations in order to operate on the raw
@@ -178,6 +126,60 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// response type.
     fn transform(&self, res: String) -> Result<String, ClientError> {
         Ok(res)
+    }
+}
+
+/// Combines the given base URL with the relative URL path from this
+/// Endpoint to create a fully qualified URL.
+fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientError> {
+    log::info!(
+        "Building endpoint url from {} base URL and {} action",
+        base,
+        endpoint.action()
+    );
+
+    let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
+        url: base.to_string(),
+        source: e,
+    })?;
+    url.path_segments_mut()
+        .unwrap()
+        .extend(endpoint.action().split('/'));
+    Ok(url)
+}
+
+/// Parses the raw response from executing the endpoint into a response type
+/// as defined by [Endpoint::Response].
+fn parse<E: Endpoint>(
+    endpoint: &E,
+    res: Result<Vec<u8>, ClientError>,
+) -> Result<Option<E::Result>, ClientError> {
+    let body = res?;
+    match body.is_empty() {
+        false => match E::RESPONSE_BODY_TYPE {
+            ResponseType::JSON => {
+                let body_err = body.clone();
+                let c =
+                    String::from_utf8(body).map_err(|e| ClientError::ResponseConversionError {
+                        source: Box::new(e),
+                        content: body_err,
+                    })?;
+                log::info!("Parsing JSON result from string");
+                log::debug!("Content before transform: {}", c);
+                let c = endpoint.transform(c)?;
+                log::debug!("Content after transform: {}", c);
+                match c.is_empty() {
+                    false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
+                        ClientError::ResponseParseError {
+                            source: Box::new(e),
+                            content: c.clone(),
+                        }
+                    })?)),
+                    true => Ok(None),
+                }
+            }
+        },
+        true => Ok(None),
     }
 }
 
