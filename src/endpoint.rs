@@ -114,6 +114,36 @@ pub trait Endpoint: Debug + Serialize + Sized {
         middle.response(self, &mut resp)?;
         parse(self, &resp.body)
     }
+
+    /// Executes the Endpoint using the given [Client], returning the raw
+    /// response as a byte array.
+    fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
+        log::info!("Executing endpoint");
+        log::debug! {"Endpoint: {:#?}", self};
+
+        let req = build_request(self, client.base())?;
+
+        let resp = client.execute(req)?;
+        Ok(resp.body)
+    }
+
+    /// Executes the Endpoint using the given [Client] and [MiddleWare],
+    /// returning the raw response as a byte array.
+    fn exec_raw_mut<C: Client, M: MiddleWare>(
+        &self,
+        client: &C,
+        middle: &M,
+    ) -> Result<Vec<u8>, ClientError> {
+        log::info!("Executing endpoint");
+        log::debug! {"Endpoint: {:#?}", self};
+
+        let mut req = build_request(self, client.base())?;
+        middle.request(self, &mut req)?;
+
+        let mut resp = client.execute(req)?;
+        middle.response(self, &mut resp)?;
+        Ok(resp.body)
+    }
 }
 
 pub trait MiddleWare {

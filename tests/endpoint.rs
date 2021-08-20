@@ -211,7 +211,7 @@ fn test_builder() {
 }
 
 #[test]
-fn test_middleware() {
+fn test_mutate() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -229,6 +229,26 @@ fn test_middleware() {
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().age, 30);
+}
+
+#[test]
+fn test_raw() {
+    #[derive(Debug, Endpoint, Serialize)]
+    #[endpoint(path = "test/path", result = "TestResponse")]
+    struct Test {}
+    let resp_data = json!({"result": {"age": 30}});
+
+    let t = TestServer::default();
+    let e = Test {};
+    let m = t.server.mock(|when, then| {
+        when.method(GET).path("/test/path");
+        then.status(200).json_body(json!({"result": {"age": 30}}));
+    });
+    let r = e.exec_raw(&t.client);
+
+    m.assert();
+    assert!(r.is_ok());
+    assert_eq!(r.unwrap(), resp_data.to_string().as_bytes());
 }
 
 #[test]
