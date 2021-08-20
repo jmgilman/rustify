@@ -6,140 +6,19 @@
 extern crate synstructure;
 extern crate proc_macro;
 
+mod error;
+mod params;
+mod parse;
+
+use error::Error;
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
-use std::ops::Deref;
-use syn::{self, spanned::Spanned, Ident};
+use syn::{self, Ident};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
 const QUERY_NAME: &str = "query";
-
-#[derive(Debug)]
-struct Error(proc_macro2::TokenStream);
-
-impl Error {
-    fn new(span: Span, message: &str) -> Error {
-        Error(quote_spanned! { span =>
-            compile_error!(#message);
-        })
-    }
-
-    fn into_tokens(self) -> proc_macro2::TokenStream {
-        self.0
-    }
-}
-
-impl From<syn::Error> for Error {
-    fn from(e: syn::Error) -> Error {
-        Error(e.to_compile_error())
-    }
-}
-
-#[derive(Default, Debug)]
-struct Parameters {
-    path: Option<syn::LitStr>,
-    method: Option<syn::Expr>,
-    result: Option<syn::Type>,
-    request_type: Option<syn::Expr>,
-    response_type: Option<syn::Expr>,
-    transform: Option<syn::Expr>,
-    builder: Option<bool>,
-}
-
-fn parse_attr(meta: &syn::Meta) -> Result<Parameters, Error> {
-    let mut params = Parameters::default();
-    if let syn::Meta::List(l) = meta {
-        // Verify the attribute list isn't empty
-        if l.nested.is_empty() {
-            return Err(Error::new(
-                meta.span(),
-                format!(
-                    "The `{}` attribute must be a list of name/value pairs",
-                    ATTR_NAME
-                )
-                .as_str(),
-            ));
-        }
-
-        // Collect name/value arguments
-        let mut args: Vec<&syn::MetaNameValue> = Vec::new();
-        for nm in l.nested.iter() {
-            if let syn::NestedMeta::Meta(m) = nm {
-                if let syn::Meta::NameValue(nv) = m {
-                    args.push(nv);
-                } else {
-                    return Err(Error::new(
-                        m.span(),
-                        format!(
-                            "The `{}` attribute must only contain name/value pairs",
-                            ATTR_NAME
-                        )
-                        .as_str(),
-                    ));
-                }
-            } else {
-                return Err(Error::new(
-                    nm.span(),
-                    "The `action` attribute must not contain any literals",
-                ));
-            }
-        }
-
-        // Extract arguments
-        for arg in args {
-            if let syn::Lit::Str(val) = &arg.lit {
-                match arg.path.get_ident().unwrap().to_string().as_str() {
-                    "path" => {
-                        params.path = Some(val.deref().clone());
-                    }
-                    "method" => {
-                        params.method = Some(val.deref().clone().parse().map_err(|_| {
-                            Error::new(arg.lit.span(), "Unable to parse value into expression")
-                        })?);
-                    }
-                    "result" => {
-                        params.result = Some(val.deref().clone().parse().map_err(|_| {
-                            Error::new(arg.lit.span(), "Unable to parse value into expression")
-                        })?);
-                    }
-                    "request_type" => {
-                        params.request_type = Some(val.deref().clone().parse().map_err(|_| {
-                            Error::new(arg.lit.span(), "Unable to parse value into expression")
-                        })?);
-                    }
-                    "response_type" => {
-                        params.response_type = Some(val.deref().clone().parse().map_err(|_| {
-                            Error::new(arg.lit.span(), "Unable to parse value into expression")
-                        })?);
-                    }
-                    "transform" => {
-                        params.transform = Some(val.deref().clone().parse().map_err(|_| {
-                            Error::new(arg.lit.span(), "Unable to parse value into expression")
-                        })?);
-                    }
-                    "builder" => params.builder = Some(true),
-                    _ => {
-                        return Err(Error::new(arg.span(), "Unsupported argument"));
-                    }
-                }
-            } else {
-                return Err(Error::new(arg.span(), "Invalid value for argument"));
-            }
-        }
-    } else {
-        return Err(Error::new(
-            meta.span(),
-            format!(
-                "The `{}` attribute must be a list of key/value pairs",
-                ATTR_NAME
-            )
-            .as_str(),
-        ));
-    }
-    Ok(params)
-}
 
 fn gen_action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
     let re = Regex::new(r"\{(.*?)\}").unwrap();
@@ -175,60 +54,57 @@ fn gen_action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 }
 
 fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
-    let mut found_attr = false;
-    let mut params = Parameters::default();
-    for attr in &s.ast().attrs {
-        match attr.parse_meta() {
-            Ok(meta) => {
-                if meta.path().is_ident(ATTR_NAME) {
-                    found_attr = true;
-                    match parse_attr(&meta) {
-                        Ok(p) => {
-                            params = p;
-                        }
-                        Err(e) => return e.into_tokens(),
-                    }
-                }
-            }
-            Err(e) => return e.to_compile_error(),
-        }
-    }
+    // Parse `endpoint` attributes attached to input struct
+    let attrs = match parse::attributes(&s.ast().attrs) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
 
-    if !found_attr {
+    // Verify attribute is present
+    if attrs.is_empty() {
         return Error::new(
             Span::call_site(),
             format!(
-                "Must supply the `{}` attribute when deriving `{}`",
-                ATTR_NAME, MACRO_NAME
+                "Deriving `{}` requires attaching an `{}` attribute",
+                MACRO_NAME, ATTR_NAME
             )
             .as_str(),
         )
         .into_tokens();
     }
 
+    // Verify there's only one instance of the attribute present
+    if attrs.len() > 1 {
+        return Error::new(
+            Span::call_site(),
+            format!("Cannot define the {} attribute more than once", ATTR_NAME).as_str(),
+        )
+        .into_tokens();
+    }
+
+    // Parse the attribute as a key/value pair list
+    let kv = match parse::attr_kv(&attrs[0]) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
+
+    // Create map from key/value pair list
+    let map = match parse::to_map(&kv) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
+
+    let params = match params::Parameters::new(map) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
+
     // Parse arguments
-    let path = match params.path {
-        Some(p) => p,
-        None => {
-            return Error::new(Span::call_site(), "Missing required `path` argument").into_tokens()
-        }
-    };
-    let method = match params.method {
-        Some(m) => m,
-        None => syn::parse_str("GET").unwrap(),
-    };
-    let result = match params.result {
-        Some(r) => r,
-        None => syn::parse_str("()").unwrap(),
-    };
-    let request_type = match params.request_type {
-        Some(r) => r,
-        None => syn::parse_str("JSON").unwrap(),
-    };
-    let response_type = match params.response_type {
-        Some(r) => r,
-        None => syn::parse_str("JSON").unwrap(),
-    };
+    let path = params.path;
+    let method = params.method;
+    let result = params.result;
+    let request_type = params.request_type;
+    let response_type = params.response_type;
 
     // Capture generic information
     let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
@@ -270,6 +146,9 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         true => quote! {},
     };
 
+    // Gather data
+    //gather_attributes(&s.ast().data);
+
     // Helper functions for the builder architecture
     let id = s.ast().ident.clone();
     let builder_id: syn::Type =
@@ -278,7 +157,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         syn::parse_str(format!("{}Builder::default()", s.ast().ident.to_string()).as_str())
             .unwrap();
     let builder = match params.builder {
-        Some(_) => quote! {
+        true => quote! {
             impl #impl_generics #id #ty_generics #where_clause {
                 pub fn builder() -> #builder_id #ty_generics {
                     #builder_func
@@ -302,7 +181,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 }
             }
         },
-        _ => quote! {},
+        false => quote! {},
     };
 
     // Generate Endpoint implementation
