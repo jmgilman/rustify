@@ -76,10 +76,49 @@ options offered by the macro:
 
 ```rust
 use derive_builder::Builder;
-use rustify::{endpoint::Endpoint, errors::ClientError};
+use rustify::clients::reqwest::ReqwestClient;
+use rustify::{endpoint::{Endpoint, MiddleWare}, errors::ClientError};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::skip_serializing_none;
+
+struct Middle {}
+impl MiddleWare for Middle {
+    fn request<E: Endpoint>(
+        &self,
+        _: &E,
+        req: &mut rustify::client::Request,
+    ) -> Result<(), ClientError> {
+        req.headers
+            .push(("X-API-Token".to_string(), "mytoken".to_string()));
+        Ok(())
+    }
+    fn response<E: Endpoint>(
+        &self,
+        _: &E,
+        resp: &mut rustify::client::Response,
+    ) -> Result<(), ClientError> {
+        let err_content = resp.content.clone();
+        let wrapper: TestWrapper =
+            serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
+                source: Box::new(e),
+                content: String::from_utf8(err_content).ok(),
+            })?;
+        resp.content = wrapper.result.to_string().as_bytes().to_vec();
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+struct TestResponse {
+    age: u8,
+}
+
+#[derive(Deserialize)]
+struct TestWrapper {
+    result: Value,
+}
 
 fn test_complex() {
     #[skip_serializing_none]
@@ -88,7 +127,6 @@ fn test_complex() {
         path = "test/path/{self.name}",
         method = "POST",
         result = "TestResponse",
-        transform = "strip",
         builder = "true"
     )]
     #[builder(setter(into, strip_option), default)]
@@ -100,30 +138,8 @@ fn test_complex() {
         optional: Option<String>,
     }
 
-    #[derive(Serialize, Deserialize)]
-    struct TestResponse {
-        age: u8,
-    }
-
-    #[derive(Deserialize)]
-    struct TestWrapper {
-        result: TestResponse,
-    }
-
-    fn strip(res: String) -> Result<String, ClientError> {
-        let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
-                source: Box::new(e),
-            })?;
-        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
-            source: Box::new(e),
-        })
-    }
-
     let client = ReqwestClient::default("http://api.com");
     let result = Test::builder().name("test").kind("test").execute(&client);
-
-    assert!(result.is_ok());
 }
 ```
 
@@ -132,9 +148,8 @@ Breaking this down:
 ```rust
     #[endpoint(
         path = "test/path/{self.name}",
-        method = "RequestType::POST",
+        method = "POST",
         result = "TestResponse",
-        transform = "strip",
         builder = "true"
     )]
 
@@ -148,18 +163,20 @@ request.
 * The `method` argument specifies the type of the HTTP request. 
 * The `result` argument specifies the type of response that the `execute()` 
 method will return. This type must derive `Deserialize`. 
-* The `transform` argument specifies an optional function which will be passed
-the raw response body as a String and return a String with any necessary
-modifications. In the example above, we're assuming the API returns responses
-wrapped in some generic wrapper (`TestWrapper`) and so our `strip` function 
-parses the response, pulls the value out of the wrapper, and returns it. 
 * The `builder` argument tells the macro to add some useful functions for when
 the endpoint is using the `Builder` derive macro from `derive_builder`. In
-particular, it adds a `builder()` static method to the base struct and an
-`execute()` method to the generated `TestBuilder` struct which automatically
+particular, it adds a `builder()` static method to the base struct and the
+`execute()` methods to the generated `TestBuilder` struct which automatically
 calls `build()` on `TestBuilder` and then executes the result. This allows for
 concise calls like this: 
 `Test::builder().name("test").kind("test").execute(&client);`.
+
+Endpoints contain two methods for executing requests; in this example the
+`execute_m()` variant is being used which allows passing an instance of an 
+object that implements `MiddleWare` which can be used to mutate the request and
+response object respectively. Here the an arbitrary request header containing a
+fictitious API token is being injected and the response has a wrapper removed
+before final parsing.  
 
 This example also demonstrates a common pattern of using `skip_serializing_none`
 macro to force `serde` to not serialize fields of type `Option::None`. When

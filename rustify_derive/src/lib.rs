@@ -270,16 +270,6 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         true => quote! {},
     };
 
-    // Optional post transformation method
-    let transform = match params.transform {
-        Some(t) => quote! {
-            fn transform(&self, res: String) -> Result<String, ClientError> {
-                #t(res)
-            }
-        },
-        None => quote! {},
-    };
-
     // Helper functions for the builder architecture
     let id = s.ast().ident.clone();
     let builder_id: syn::Type =
@@ -302,6 +292,14 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 ) -> Result<Option<#result>, ClientError> {
                     self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.execute(client)
                 }
+
+                pub fn execute_m<C: Client, M: MiddleWare>(
+                    &self,
+                    client: &C,
+                    middle: &M,
+                ) -> Result<Option<#result>, ClientError> {
+                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.execute_m(client, middle)
+                }
             }
         },
         _ => quote! {},
@@ -313,7 +311,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     quote! {
         const #const_ident: () = {
             use ::rustify::client::Client;
-            use ::rustify::endpoint::Endpoint;
+            use ::rustify::endpoint::{Endpoint, MiddleWare};
             use ::rustify::enums::{RequestMethod, RequestType, ResponseType};
             use ::rustify::errors::ClientError;
             use ::serde_json::Value;
@@ -332,8 +330,6 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 }
 
                 #query
-
-                #transform
             }
 
             #builder

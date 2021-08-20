@@ -35,7 +35,7 @@ pub enum ClientError {
     #[error("Error parsing HTTP response")]
     ResponseParseError {
         source: Box<dyn StdError>,
-        content: String,
+        content: Option<String>,
     },
     #[error("Server returned error")]
     ServerResponseError {

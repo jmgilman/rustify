@@ -5,12 +5,52 @@ use std::{fmt::Debug, marker::PhantomData};
 use common::TestServer;
 use derive_builder::Builder;
 use httpmock::prelude::*;
-use rustify::{endpoint::Endpoint, errors::ClientError};
+use rustify::{
+    endpoint::{Endpoint, MiddleWare},
+    errors::ClientError,
+};
 use rustify_derive::Endpoint;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use serde_with::skip_serializing_none;
 use test_env_log::test;
+
+#[derive(Debug, Deserialize)]
+struct TestResponse {
+    age: u8,
+}
+
+#[derive(Debug, Deserialize)]
+struct TestWrapper {
+    result: Value,
+}
+
+struct Middle {}
+impl MiddleWare for Middle {
+    fn request<E: Endpoint>(
+        &self,
+        _: &E,
+        req: &mut rustify::client::Request,
+    ) -> Result<(), ClientError> {
+        req.headers
+            .push(("X-API-Token".to_string(), "mytoken".to_string()));
+        Ok(())
+    }
+    fn response<E: Endpoint>(
+        &self,
+        _: &E,
+        resp: &mut rustify::client::Response,
+    ) -> Result<(), ClientError> {
+        let err_content = resp.content.clone();
+        let wrapper: TestWrapper =
+            serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
+                source: Box::new(e),
+                content: String::from_utf8(err_content).ok(),
+            })?;
+        resp.content = wrapper.result.to_string().as_bytes().to_vec();
+        Ok(())
+    }
+}
 
 #[test]
 fn test_path() {
@@ -171,38 +211,20 @@ fn test_builder() {
 }
 
 #[test]
-fn test_transform() {
+fn test_middleware() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", result = "TestResponse", transform = "strip")]
+    #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
-
-    #[derive(Debug, Serialize, Deserialize)]
-    struct TestResponse {
-        age: u8,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct TestWrapper {
-        result: TestResponse,
-    }
-
-    fn strip(res: String) -> Result<String, ClientError> {
-        let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
-                source: Box::new(e),
-            })?;
-        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
-            source: Box::new(e),
-        })
-    }
 
     let t = TestServer::default();
     let e = Test {};
     let m = t.server.mock(|when, then| {
-        when.method(GET).path("/test/path");
+        when.method(GET)
+            .path("/test/path")
+            .header("X-API-Token", "mytoken");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.execute(&t.client);
+    let r = e.execute_m(&t.client, &Middle {});
 
     m.assert();
     assert!(r.is_ok());
@@ -213,11 +235,7 @@ fn test_transform() {
 fn test_generic() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Endpoint, Serialize)]
-    #[endpoint(
-        path = "test/path/{self.name}",
-        result = "TestResponse<T>",
-        transform = "strip::<TestResponse<T>>"
-    )]
+    #[endpoint(path = "test/path/{self.name}", result = "TestResponse<T>")]
     #[builder(setter(into, strip_option))]
     struct Test<T: DeserializeOwned + Serialize + Debug> {
         #[serde(skip)]
@@ -243,16 +261,6 @@ fn test_generic() {
         result: T,
     }
 
-    fn strip<T: DeserializeOwned + Serialize>(res: String) -> Result<String, ClientError> {
-        let r: TestWrapper<T> =
-            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
-                source: Box::new(e),
-            })?;
-        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
-            source: Box::new(e),
-        })
-    }
-
     let t = TestServer::default();
     let m = t.server.mock(|when, then| {
         when.method(GET).path("/test/path/test");
@@ -263,8 +271,7 @@ fn test_generic() {
         .name("test")
         .build()
         .unwrap()
-        .execute(&t.client);
-
+        .execute_m(&t.client, &Middle {});
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().data.age, 30);
@@ -278,7 +285,6 @@ fn test_complex() {
         path = "test/path/{self.name}",
         method = "POST",
         result = "TestResponse",
-        transform = "strip",
         builder = "true"
     )]
     #[builder(setter(into, strip_option), default)]
@@ -290,26 +296,6 @@ fn test_complex() {
         optional: Option<String>,
     }
 
-    #[derive(Debug, Serialize, Deserialize)]
-    struct TestResponse {
-        age: u8,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct TestWrapper {
-        result: TestResponse,
-    }
-
-    fn strip(res: String) -> Result<String, ClientError> {
-        let r: TestWrapper =
-            serde_json::from_str(res.as_str()).map_err(|e| ClientError::GenericError {
-                source: Box::new(e),
-            })?;
-        serde_json::to_string(&r.result).map_err(|e| ClientError::GenericError {
-            source: Box::new(e),
-        })
-    }
-
     let t = TestServer::default();
     let m = t.server.mock(|when, then| {
         when.method(POST)
@@ -317,7 +303,12 @@ fn test_complex() {
             .json_body(json!({ "kind": "test" }));
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = Test::builder().name("test").kind("test").execute(&t.client);
+    let r = Test::builder()
+        .name("test")
+        .kind("test")
+        .build()
+        .unwrap()
+        .execute_m(&t.client, &Middle {});
 
     m.assert();
     assert!(r.is_ok());

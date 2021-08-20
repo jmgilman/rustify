@@ -94,7 +94,19 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
         let req = build_request(self, client.base())?;
         let resp = client.execute(req)?;
-        parse(self, resp)
+
+        if resp.content.is_empty() {
+            return Ok(None);
+        }
+
+        match Self::RESPONSE_BODY_TYPE {
+            ResponseType::JSON => {
+                serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
+                    source: Box::new(e),
+                    content: String::from_utf8(resp.content).ok(),
+                })
+            }
+        }
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -108,24 +120,28 @@ pub trait Endpoint: Debug + Serialize + Sized {
         log::debug! {"Endpoint: {:#?}", self};
 
         let mut req = build_request(self, client.base())?;
-        middle.request(self, &mut req);
+        middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req)?;
-        middle.response(self, &mut resp);
-        parse(self, resp)
-    }
+        if resp.content.is_empty() {
+            return Ok(None);
+        }
 
-    /// Can be overriden by implementations in order to operate on the raw
-    /// response from executing this Endpoint prior to returning the final
-    /// response type.
-    fn transform(&self, res: String) -> Result<String, ClientError> {
-        Ok(res)
+        middle.response(self, &mut resp)?;
+        match Self::RESPONSE_BODY_TYPE {
+            ResponseType::JSON => {
+                serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
+                    source: Box::new(e),
+                    content: String::from_utf8(resp.content).ok(),
+                })
+            }
+        }
     }
 }
 
 pub trait MiddleWare {
-    fn request<E: Endpoint>(&self, endpoint: &E, req: &mut Request);
-    fn response<E: Endpoint>(&self, endpoint: &E, req: &mut Response);
+    fn request<E: Endpoint>(&self, endpoint: &E, req: &mut Request) -> Result<(), ClientError>;
+    fn response<E: Endpoint>(&self, endpoint: &E, resp: &mut Response) -> Result<(), ClientError>;
 }
 
 /// Builds a [Request] using the given [Endpoint] and base URL
@@ -145,6 +161,7 @@ fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, Clien
                 "{}" => "".to_string(),
                 _ => parse_data,
             }
+            .into_bytes()
         }
     };
 
@@ -153,7 +170,7 @@ fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, Clien
         method,
         query,
         headers,
-        body: body.into_bytes(),
+        body,
     })
 }
 
@@ -174,36 +191,4 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
         .unwrap()
         .extend(endpoint.action().split('/'));
     Ok(url)
-}
-
-/// Parses the raw response from executing the endpoint into a response type
-/// as defined by [Endpoint::Response].
-fn parse<E: Endpoint>(endpoint: &E, resp: Response) -> Result<Option<E::Result>, ClientError> {
-    let body = resp.content;
-    match body.is_empty() {
-        false => match E::RESPONSE_BODY_TYPE {
-            ResponseType::JSON => {
-                let body_err = body.clone();
-                let c =
-                    String::from_utf8(body).map_err(|e| ClientError::ResponseConversionError {
-                        source: Box::new(e),
-                        content: body_err,
-                    })?;
-                log::info!("Parsing JSON result from string");
-                log::debug!("Content before transform: {}", c);
-                let c = endpoint.transform(c)?;
-                log::debug!("Content after transform: {}", c);
-                match c.is_empty() {
-                    false => Ok(Some(serde_json::from_str(c.as_str()).map_err(|e| {
-                        ClientError::ResponseParseError {
-                            source: Box::new(e),
-                            content: c.clone(),
-                        }
-                    })?)),
-                    true => Ok(None),
-                }
-            }
-        },
-        true => Ok(None),
-    }
 }
