@@ -4,6 +4,7 @@ use crate::Error;
 use proc_macro2::Span;
 use syn::{Expr, Ident, LitStr, Type};
 
+/// Used for building the parameter list for the derive function
 #[derive(Default, Debug)]
 pub struct ParametersBuilder {
     pub path: Option<LitStr>,
@@ -14,6 +15,7 @@ pub struct ParametersBuilder {
     pub builder: Option<bool>,
 }
 
+/// Represents all valid parameters that can be passed to the derive function
 #[derive(Debug)]
 pub struct Parameters {
     pub path: LitStr,
@@ -25,6 +27,12 @@ pub struct Parameters {
 }
 
 impl Parameters {
+    /// Given a map of identities to literal strings, builds a new instance of
+    /// [Parameters] using the contents of the map.
+    ///
+    /// The only required parameter is `path` and not providing it will cause
+    /// the function to fail. All other parameters are optional and will have
+    /// sane defaults provided if they are not found in the map.
     pub fn new(map: HashMap<Ident, LitStr>) -> Result<Parameters, Error> {
         let mut builder = ParametersBuilder::default();
         for key in map.keys() {
@@ -80,6 +88,7 @@ impl Parameters {
     }
 }
 
+/// Parses a [LitStr] into `T` and returns an error if it fails
 fn parse<T: syn::parse::Parse>(value: &LitStr) -> Result<T, Error> {
     value
         .parse()

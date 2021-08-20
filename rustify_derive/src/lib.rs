@@ -1,6 +1,8 @@
-//! Provides a derive macro for easily implementing an Endpoint from the
-//! `rustify` crate. See the documentation for `rustify` for details on how
+//! Provides a derive macro for easily implementing an `Endpoint` from the
+//! [rustify][1] crate. See the documentation for `rustify` for details on how
 //! to use this macro.
+//!
+//! [1]: https://docs.rs/rustify/
 
 #[macro_use]
 extern crate synstructure;
@@ -23,7 +25,24 @@ const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
 const QUERY_NAME: &str = "query";
 
-fn action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
+/// Generates the path string for the endpoint.
+///
+/// The string supplied by the end-user supports basic interpolation using curly
+/// braces. For example,
+/// ```
+/// endpoint(path = "user/{self.name}")
+/// ```
+/// Should produce:
+/// ```
+/// format!("user/{}", self.name);
+/// ```
+/// This is currently accomplished using a basic regular expression which
+/// matches contents in the braces, extracts them out, leaving behind the empty
+/// braces and placing the contents into the proper position in `format!`.
+///
+/// If no interpolation is needed the user provided string is fed into
+/// `String::from` without modification.
+fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
     let re = Regex::new(r"\{(.*?)\}").unwrap();
     let mut fmt_args: Vec<syn::Expr> = Vec::new();
     for cap in re.captures_iter(path.value().as_str()) {
@@ -56,7 +75,18 @@ fn action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
     }
 }
 
-fn query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
+/// Generates the query method for generating query parameters.
+///
+/// Searches the given map of (field name -> attribute parameter list) and looks
+/// for any field which contains `QUERY_NAME`. A list of all field names which
+/// are marked with the query parameter is generated and then mapped into a
+/// list of token streams which appear as below:
+/// ```
+/// vec!(("field_name".to_string(), serde_json::value::to_value(&self.field_name).unwrap()))
+/// ```
+/// If no fields are marked the method is not generated which allows the trait
+/// method to be used (defaults to empty vec).
+fn gen_query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
     // Collect all fields that have a query parameter attached
     let mut query_fields = Vec::<&Ident>::new();
     for (key, value) in fields.iter() {
@@ -89,7 +119,17 @@ fn query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
     }
 }
 
-fn builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::TokenStream {
+/// Generates `builder()` and `exec_*` helper methods for use with
+/// `derive_builder`.
+///
+/// Adds an implementation to the base struct which provides a `builder` method
+/// for returning instances of the Builder variant of the struct. This removes
+/// the need to explicitely import it.
+///
+/// Adds an implementation to the Builder varaint of the struct which adds the
+/// various `exec()` methods directly to the Builder. This allows circumventing
+/// the need to `build()` before executing the endpoint.
+fn gen_builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let builder_id: syn::Type =
         syn::parse_str(format!("{}Builder", id.to_string()).as_str()).unwrap();
@@ -122,6 +162,8 @@ fn builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::Token
     }
 }
 
+/// Parses parameters passed into the `endpoint` attribute attached to the
+/// struct.
 fn parse_params(attr: &Meta) -> Result<Parameters, Error> {
     // Parse the attribute as a key/value pair list
     let kv = parse::attr_kv(attr)?;
@@ -133,6 +175,7 @@ fn parse_params(attr: &Meta) -> Result<Parameters, Error> {
     params::Parameters::new(map)
 }
 
+/// Implements `Endpoint` on the provided struct.
 fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Parse `endpoint` attributes attached to input struct
     let attrs = match parse::attributes(&s.ast().attrs) {
@@ -181,21 +224,21 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let response_type = params.response_type;
     let id = &s.ast().ident;
 
-    // Generate action string
-    let action = match action(&path) {
+    // Generate path string
+    let path = match gen_path(&path) {
         Ok(a) => a,
         Err(e) => return e.into_tokens(),
     };
 
     // Generate query function
-    let query = query(&field_attrs);
+    let query = gen_query(&field_attrs);
 
     // Gather data
     //gather_attributes(&s.ast().data);
 
     // Generate helper functions when deriving Builder
     let builder = match params.builder {
-        true => builder(&s.ast().ident, &result, &s.ast().generics),
+        true => gen_builder(&s.ast().ident, &result, &s.ast().generics),
         false => quote! {},
     };
 
@@ -219,7 +262,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 const RESPONSE_BODY_TYPE: ResponseType = ResponseType::#response_type;
 
                 fn path(&self) -> String {
-                    #action
+                    #path
                 }
 
                 fn method(&self) -> RequestMethod {

@@ -3,6 +3,14 @@ use std::collections::{HashMap, HashSet};
 use crate::Error;
 use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
 
+/// Returns all [Meta] values contained in a [Meta::List].
+///
+/// For example:
+/// ```
+/// #[endpoint(query, data)]
+/// ```
+/// Would return individual [Meta] values for `query` and `data`. This function
+/// fails if the [Meta::List] is empty or contains any literals.
 pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     if let Meta::List(list) = &attr {
@@ -27,6 +35,15 @@ pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     }
 }
 
+/// Returns all [MetaNameValue] values contained in a [Meta::List].
+///
+/// For example:
+/// ```
+/// #[endpoint(path = "my/path", method = "POST")]
+/// ```
+/// Would return individual [MetaNameValue] values for `path` and `method`. This
+/// function fails if the [Meta::List] is empty, contains literals, or cannot
+/// be parsed as name/value pairs.
 pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
     let meta_list = attr_list(attr)?;
     let mut result = Vec::<MetaNameValue>::new();
@@ -43,6 +60,15 @@ pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
     Ok(result)
 }
 
+/// Converts a list of [MetaNameValue] values into a [HashMap].
+///
+/// For example, assuming the below has been parsed into [MetaNameValue]'s:
+/// ```
+/// #[endpoint(path = "my/path", method = "POST")]
+/// ```
+/// Would return a [HashMap] mapping individual ID's (i.e. `path` and `method`)
+/// to their [LitStr] values (i.e. "m/path" and "POST"). This function fails if
+/// the values cannot be parsed as string literals.
 pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error> {
     let mut map = HashMap::<Ident, LitStr>::new();
     for value in values.iter() {
@@ -60,6 +86,7 @@ pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error>
     Ok(map)
 }
 
+/// Searches a list of [Attribute]'s and returns any matching [crate::ATTR_NAME].
 pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     for attr in attrs.iter() {
@@ -75,6 +102,20 @@ pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     Ok(result)
 }
 
+/// Parses all [Attribute]'s on the given [syn::Field]'s, searching for any
+/// attributes which match [crate::ATTR_NAME] and creating a map of field names
+/// to attached attribute parameters.
+///
+/// This function makes a basic assumption that all attributes will be a list
+/// of [Meta] values. Any other format will cause the function to fail. The
+/// function automatically provides deduplication of paramter values. For
+/// example:
+/// ```
+/// #[endpoint(query, data, data)]
+/// #[endpoint(query)]
+/// my_field: String
+/// ```
+/// Would deduplicate into `{my_field: query, data}`.
 pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>>, Error> {
     let mut result = HashMap::<Ident, HashSet<Meta>>::new();
     if let syn::Data::Struct(data) = data {
