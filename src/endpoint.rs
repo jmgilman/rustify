@@ -94,19 +94,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
         let req = build_request(self, client.base())?;
         let resp = client.execute(req)?;
-
-        if resp.content.is_empty() {
-            return Ok(None);
-        }
-
-        match Self::RESPONSE_BODY_TYPE {
-            ResponseType::JSON => {
-                serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
-                    source: Box::new(e),
-                    content: String::from_utf8(resp.content).ok(),
-                })
-            }
-        }
+        parse(self, &resp.content)
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -123,19 +111,8 @@ pub trait Endpoint: Debug + Serialize + Sized {
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req)?;
-        if resp.content.is_empty() {
-            return Ok(None);
-        }
-
         middle.response(self, &mut resp)?;
-        match Self::RESPONSE_BODY_TYPE {
-            ResponseType::JSON => {
-                serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
-                    source: Box::new(e),
-                    content: String::from_utf8(resp.content).ok(),
-                })
-            }
-        }
+        parse(self, &resp.content)
     }
 }
 
@@ -191,4 +168,21 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
         .unwrap()
         .extend(endpoint.action().split('/'));
     Ok(url)
+}
+
+/// Parses a response body into the [Endpoint::Result], choosing a deserializer
+/// based on [Endpoint::RESPONSE_BODY_TYPE].
+fn parse<E: Endpoint>(_: &E, body: &[u8]) -> Result<Option<E::Result>, ClientError> {
+    if body.is_empty() {
+        return Ok(None);
+    }
+
+    match E::RESPONSE_BODY_TYPE {
+        ResponseType::JSON => {
+            serde_json::from_slice(body).map_err(|e| ClientError::ResponseParseError {
+                source: Box::new(e),
+                content: String::from_utf8(body.to_vec()).ok(),
+            })
+        }
+    }
 }
