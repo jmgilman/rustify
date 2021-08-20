@@ -85,13 +85,13 @@
 //!         _: &E,
 //!         resp: &mut rustify::client::Response,
 //!     ) -> Result<(), ClientError> {
-//!         let err_content = resp.content.clone();
+//!         let err_body = resp.body.clone();
 //!         let wrapper: TestWrapper =
-//!             serde_json::from_slice(&resp.content).map_err(|e| ClientError::ResponseParseError {
+//!             serde_json::from_slice(&resp.body).map_err(|e| ClientError::ResponseParseError {
 //!                 source: Box::new(e),
-//!                 content: String::from_utf8(err_content).ok(),
+//!                 content: String::from_utf8(err_body).ok(),
 //!             })?;
-//!         resp.content = wrapper.result.to_string().as_bytes().to_vec();
+//!         resp.body = wrapper.result.to_string().as_bytes().to_vec();
 //!         Ok(())
 //!     }
 //! }

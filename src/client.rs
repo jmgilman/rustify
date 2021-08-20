@@ -34,7 +34,7 @@ pub trait Client {
             "Client received {} response from {} with {} bytes of body data",
             response.code,
             response.url,
-            response.content.len()
+            response.body.len()
         );
 
         // Check response
@@ -42,7 +42,7 @@ pub trait Client {
             return Err(ClientError::ServerResponseError {
                 url: response.url.to_string(),
                 code: response.code,
-                content: String::from_utf8(response.content).ok(),
+                content: String::from_utf8(response.body).ok(),
             });
         }
 
@@ -66,5 +66,5 @@ pub struct Request {
 pub struct Response {
     pub url: Url,
     pub code: u16,
-    pub content: Vec<u8>,
+    pub body: Vec<u8>,
 }

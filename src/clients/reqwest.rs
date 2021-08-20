@@ -186,7 +186,7 @@ impl Client for ReqwestClient {
 
         let url = response.url().clone();
         let status_code = response.status().as_u16();
-        let content = response
+        let body = response
             .bytes()
             .map_err(|e| ClientError::ResponseError {
                 source: Box::new(e),
@@ -195,7 +195,7 @@ impl Client for ReqwestClient {
         Ok(crate::client::Response {
             url,
             code: status_code,
-            content,
+            body,
         })
     }
 }

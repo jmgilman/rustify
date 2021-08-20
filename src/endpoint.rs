@@ -94,7 +94,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
         let req = build_request(self, client.base())?;
         let resp = client.execute(req)?;
-        parse(self, &resp.content)
+        parse(self, &resp.body)
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -112,7 +112,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
         let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
-        parse(self, &resp.content)
+        parse(self, &resp.body)
     }
 }
 
