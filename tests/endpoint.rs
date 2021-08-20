@@ -64,7 +64,7 @@ fn test_path() {
         when.method(GET).path("/test/path");
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -82,7 +82,7 @@ fn test_path_method() {
         when.method(POST).path("/test/path");
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -113,7 +113,7 @@ fn test_path_query() {
             .query_param_exists("age");
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -136,7 +136,7 @@ fn test_path_method_with_format() {
         when.method(POST).path("/test/path/test").body("");
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -160,7 +160,7 @@ fn test_path_method_with_data() {
             .json_body(json!({ "name": "test" }));
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -183,7 +183,7 @@ fn test_path_result() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"age": 30}));
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -204,7 +204,7 @@ fn test_builder() {
         when.method(POST).path("/test/path");
         then.status(200);
     });
-    let r = Test::builder().name("test").execute(&t.client);
+    let r = Test::builder().name("test").exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());
@@ -224,7 +224,7 @@ fn test_middleware() {
             .header("X-API-Token", "mytoken");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.execute_m(&t.client, &Middle {});
+    let r = e.exec_mut(&t.client, &Middle {});
 
     m.assert();
     assert!(r.is_ok());
@@ -271,7 +271,7 @@ fn test_generic() {
         .name("test")
         .build()
         .unwrap()
-        .execute_m(&t.client, &Middle {});
+        .exec_mut(&t.client, &Middle {});
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().data.age, 30);
@@ -308,7 +308,7 @@ fn test_complex() {
         .kind("test")
         .build()
         .unwrap()
-        .execute_m(&t.client, &Middle {});
+        .exec_mut(&t.client, &Middle {});
 
     m.assert();
     assert!(r.is_ok());

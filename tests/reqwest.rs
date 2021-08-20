@@ -22,7 +22,7 @@ fn test_server_error() {
         when.method(GET).path("/test/path");
         then.status(500);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_err());
@@ -61,7 +61,7 @@ fn test_middleware() {
             .header("Test-Header", "test");
         then.status(200);
     });
-    let r = e.execute(&t.client);
+    let r = e.exec(&t.client);
 
     m.assert();
     assert!(r.is_ok());

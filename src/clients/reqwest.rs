@@ -67,7 +67,7 @@ impl MiddleWare for DefaultMiddleWare {
 ///
 /// let client = ReqwestClient::default("http://myapi.com");
 /// let endpoint = MyEndpoint {};
-/// let result = endpoint.execute(&client);
+/// let result = endpoint.exec(&client);
 /// ```
 ///
 /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html

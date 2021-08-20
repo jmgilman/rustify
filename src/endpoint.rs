@@ -58,7 +58,7 @@ use url::Url;
 /// // Execute our Endpoint using the client
 /// // This sends a GET request to http://myapi.com/my/endpoint
 /// // It assumes an empty response
-/// let result = endpoint.execute(&client);
+/// let result = endpoint.exec(&client);
 /// ```
 pub trait Endpoint: Debug + Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
@@ -88,7 +88,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized response as defined by [Endpoint::Result].
-    fn execute<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
+    fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
@@ -99,7 +99,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized response as defined by [Endpoint::Result].
-    fn execute_m<C: Client, M: MiddleWare>(
+    fn exec_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
         middle: &M,

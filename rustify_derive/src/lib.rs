@@ -286,19 +286,19 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             }
 
             impl #impl_generics #builder_id #ty_generics #where_clause {
-                pub fn execute<C: Client>(
+                pub fn exec<C: Client>(
                     &self,
                     client: &C,
                 ) -> Result<Option<#result>, ClientError> {
-                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.execute(client)
+                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client)
                 }
 
-                pub fn execute_m<C: Client, M: MiddleWare>(
+                pub fn exec_mut<C: Client, M: MiddleWare>(
                     &self,
                     client: &C,
                     middle: &M,
                 ) -> Result<Option<#result>, ClientError> {
-                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.execute_m(client, middle)
+                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle)
                 }
             }
         },

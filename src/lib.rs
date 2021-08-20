@@ -52,7 +52,7 @@
 //!
 //! let endpoint = Test {};
 //! let client = ReqwestClient::default("http://!api.com");
-//! let result = endpoint.execute(&client);
+//! let result = endpoint.exec(&client);
 //! ```
 //!
 //! ## Advanced Usage
@@ -125,7 +125,7 @@
 //!     }
 //!
 //!     let client = ReqwestClient::default("http://!api.com");
-//!     let result = Test::builder().name("test").kind("test").execute(&client);
+//!     let result = Test::builder().name("test").kind("test").exec_mut(&client, &Middle {});
 //!
 //! }
 //! ```
@@ -149,15 +149,15 @@
 //!   when building the request.
 //! * The `method` argument specifies the type of the HTTP request.
 //! * The `result` argument specifies the type of response that the
-//!   [execute()][crate::endpoint::Endpoint::execute] method will return. This
+//!   [exec()][crate::endpoint::Endpoint::execute] method will return. This
 //!   type must derive [serde::Deserialize].
 //! * The `builder` argument tells the macro to add some useful functions for
 //!   when the endpoint is using the `Builder` derive macro from
 //!   [derive_builder][3]. In particular, it adds a `builder()` static method to
-//!   the base struct and the `execute()` methods to the generated `TestBuilder`
+//!   the base struct and the `exec()` methods to the generated `TestBuilder`
 //!   struct which automatically calls `build()` on `TestBuilder` and then
 //!   executes the result. This allows for concise calls like this:
-//!   `Test::builder().name("test").kind("test").execute(&client);`
+//!   `Test::builder().name("test").kind("test").exec(&client);`
 //!
 //! Endpoints contain two methods for executing requests; in this example the
 //! `execute_m()` variant is being used which allows passing an instance of an
@@ -175,13 +175,13 @@
 //!
 //! ```ignore
 //! // Errors, `kind` field is required
-//! let result = Test::builder().name("test").execute(&client);
+//! let result = Test::builder().name("test").exec(&client);
 //!
 //! // Produces POST http://!api.com/test/path/test {"kind": "test"}
-//! let result = Test::builder().name("test").kind("test").execute(&client);
+//! let result = Test::builder().name("test").kind("test").exec(&client);
 //!
 //! // Produces POST http://!api.com/test/path/test {"kind": "test", "optional": "yes"}
-//! let result = Test::builder().name("test").kind("test").optional("yes").execute(&client);
+//! let result = Test::builder().name("test").kind("test").optional("yes").exec&client);
 //! ```
 //!
 //! ## Error Handling
