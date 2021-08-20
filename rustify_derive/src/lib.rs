@@ -218,7 +218,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 const REQUEST_BODY_TYPE: RequestType = RequestType::#request_type;
                 const RESPONSE_BODY_TYPE: ResponseType = ResponseType::#response_type;
 
-                fn action(&self) -> String {
+                fn path(&self) -> String {
                     #action
                 }
 

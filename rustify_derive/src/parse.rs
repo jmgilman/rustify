@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::Error;
-use syn::{spanned::Spanned, Attribute, Field, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
+use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
 
 pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();

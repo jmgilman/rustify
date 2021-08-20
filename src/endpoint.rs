@@ -76,7 +76,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// This is combined with the base URL from a
     /// [Client][crate::client::Client] instance to create the fully qualified
     /// URL.
-    fn action(&self) -> String;
+    fn path(&self) -> String;
 
     /// The HTTP method to be used when executing this Endpoint.
     fn method(&self) -> RequestMethod;
@@ -187,7 +187,7 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
     log::info!(
         "Building endpoint url from {} base URL and {} action",
         base,
-        endpoint.action()
+        endpoint.path()
     );
 
     let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
@@ -196,7 +196,7 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
     })?;
     url.path_segments_mut()
         .unwrap()
-        .extend(endpoint.action().split('/'));
+        .extend(endpoint.path().split('/'));
     Ok(url)
 }
 
