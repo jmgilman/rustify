@@ -94,10 +94,10 @@ fn test_path_query() {
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
         #[serde(skip)]
-        #[query]
+        #[endpoint(query)]
         pub name: String,
         #[serde(skip)]
-        #[query]
+        #[endpoint(query)]
         pub age: u64,
     }
 

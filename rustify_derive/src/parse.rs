@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::Error;
-use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
+use syn::{spanned::Spanned, Attribute, Field, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
 
 pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
@@ -75,11 +75,24 @@ pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     Ok(result)
 }
 
-pub fn field_attributes(data: &syn::Data) -> Result<Vec<Meta>, Error> {
-    let mut result = Vec::<Meta>::new();
+pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>>, Error> {
+    let mut result = HashMap::<Ident, HashSet<Meta>>::new();
     if let syn::Data::Struct(data) = data {
         for field in data.fields.iter() {
-            result.extend(attributes(&field.attrs)?)
+            // Collect all `endpoint` attributes attached to this field
+            let attrs = attributes(&field.attrs)?;
+
+            // Combine all meta parameters from each attribute
+            let attrs = attrs
+                .iter()
+                .map(|a| attr_list(a))
+                .collect::<Result<Vec<Vec<Meta>>, Error>>()?;
+
+            // Flatten and eliminate duplicates
+            let attrs = attrs.into_iter().flatten().collect::<HashSet<Meta>>();
+
+            // Map field name -> unique attribute parameters
+            result.insert(field.ident.clone().unwrap(), attrs);
         }
     }
 

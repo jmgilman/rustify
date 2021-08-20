@@ -10,17 +10,20 @@ mod error;
 mod params;
 mod parse;
 
+use std::collections::{HashMap, HashSet};
+
 use error::Error;
+use params::Parameters;
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
-use syn::{self, Ident};
+use syn::{self, Ident, Meta};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
 const QUERY_NAME: &str = "query";
 
-fn gen_action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
+fn action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
     let re = Regex::new(r"\{(.*?)\}").unwrap();
     let mut fmt_args: Vec<syn::Expr> = Vec::new();
     for cap in re.captures_iter(path.value().as_str()) {
@@ -53,9 +56,59 @@ fn gen_action(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
     }
 }
 
+fn query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
+    // Collect all fields that have a query parameter attached
+    let mut query_fields = Vec::<&Ident>::new();
+    for (key, value) in fields.iter() {
+        for attr in value.iter() {
+            if attr.path().is_ident(QUERY_NAME) {
+                query_fields.push(key);
+            }
+        }
+    }
+
+    match query_fields.is_empty() {
+        false => {
+            // Vec of ("#id".to_string(), serde_json::value::to_value(&self.#id).unwrap())
+            let exprs = query_fields
+                .iter()
+                .map(|id| {
+                    let id_str = id.to_string();
+                    quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) }
+                })
+                .collect::<Vec<proc_macro2::TokenStream>>();
+
+            // Construct query function
+            quote! {
+                fn query(&self) -> Vec<(String, Value)> {
+                    vec!(#(#exprs),*)
+                }
+            }
+        }
+        true => quote! {},
+    }
+}
+
+fn parse_params(attr: &Meta) -> Result<Parameters, Error> {
+    // Parse the attribute as a key/value pair list
+    let kv = parse::attr_kv(attr)?;
+
+    // Create map from key/value pair list
+    let map = parse::to_map(&kv)?;
+
+    // Convert map to Parameters
+    params::Parameters::new(map)
+}
+
 fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Parse `endpoint` attributes attached to input struct
     let attrs = match parse::attributes(&s.ast().attrs) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
+
+    // Parse `endpoint` attributes attached to input struct fields
+    let field_attrs = match parse::field_attributes(&s.ast().data) {
         Ok(v) => v,
         Err(e) => return e.into_tokens(),
     };
@@ -82,19 +135,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         .into_tokens();
     }
 
-    // Parse the attribute as a key/value pair list
-    let kv = match parse::attr_kv(&attrs[0]) {
-        Ok(v) => v,
-        Err(e) => return e.into_tokens(),
-    };
-
-    // Create map from key/value pair list
-    let map = match parse::to_map(&kv) {
-        Ok(v) => v,
-        Err(e) => return e.into_tokens(),
-    };
-
-    let params = match params::Parameters::new(map) {
+    let params = match parse_params(&attrs[0]) {
         Ok(v) => v,
         Err(e) => return e.into_tokens(),
     };
@@ -109,42 +150,14 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Capture generic information
     let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
 
-    // Hacky variable substitution
-    let action = match gen_action(&path) {
+    // Generate action string
+    let action = match action(&path) {
         Ok(a) => a,
         Err(e) => return e.into_tokens(),
     };
 
     // Gather any query parameters
-    let mut query_params: Vec<proc_macro2::TokenStream> = Vec::new();
-    if let syn::Data::Struct(data) = &s.ast().data {
-        for field in data.fields.iter() {
-            if field.ident.clone().unwrap() == QUERY_NAME {
-                let id = &field.ident;
-                let id_str = field.ident.as_ref().unwrap().to_string();
-                let expr = quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) };
-                query_params.push(expr);
-            } else {
-                for attr in field.attrs.iter() {
-                    if attr.path.is_ident(QUERY_NAME) {
-                        let id = &field.ident;
-                        let id_str = field.ident.as_ref().unwrap().to_string();
-                        let expr = quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) };
-                        query_params.push(expr);
-                    }
-                }
-            }
-        }
-    }
-
-    let query = match query_params.is_empty() {
-        false => quote! {
-            fn query(&self) -> Vec<(String, Value)> {
-                vec!(#(#query_params),*)
-            }
-        },
-        true => quote! {},
-    };
+    let query = query(&field_attrs);
 
     // Gather data
     //gather_attributes(&s.ast().data);
