@@ -17,7 +17,7 @@ use params::Parameters;
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
-use syn::{self, Ident, Meta};
+use syn::{self, Generics, Ident, Meta, Type};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
@@ -89,6 +89,39 @@ fn query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
     }
 }
 
+fn builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let builder_id: syn::Type =
+        syn::parse_str(format!("{}Builder", id.to_string()).as_str()).unwrap();
+    let builder_func: syn::Expr =
+        syn::parse_str(format!("{}Builder::default()", id.to_string()).as_str()).unwrap();
+
+    quote! {
+        impl #impl_generics #id #ty_generics #where_clause {
+            pub fn builder() -> #builder_id #ty_generics {
+                #builder_func
+            }
+        }
+
+        impl #impl_generics #builder_id #ty_generics #where_clause {
+            pub fn exec<C: Client>(
+                &self,
+                client: &C,
+            ) -> Result<Option<#result>, ClientError> {
+                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client)
+            }
+
+            pub fn exec_mut<C: Client, M: MiddleWare>(
+                &self,
+                client: &C,
+                middle: &M,
+            ) -> Result<Option<#result>, ClientError> {
+                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle)
+            }
+        }
+    }
+}
+
 fn parse_params(attr: &Meta) -> Result<Parameters, Error> {
     // Parse the attribute as a key/value pair list
     let kv = parse::attr_kv(attr)?;
@@ -135,20 +168,18 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         .into_tokens();
     }
 
+    // Parse endpoint attribute parameters
     let params = match parse_params(&attrs[0]) {
         Ok(v) => v,
         Err(e) => return e.into_tokens(),
     };
 
-    // Parse arguments
     let path = params.path;
     let method = params.method;
     let result = params.result;
     let request_type = params.request_type;
     let response_type = params.response_type;
-
-    // Capture generic information
-    let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
+    let id = &s.ast().ident;
 
     // Generate action string
     let action = match action(&path) {
@@ -156,46 +187,20 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
         Err(e) => return e.into_tokens(),
     };
 
-    // Gather any query parameters
+    // Generate query function
     let query = query(&field_attrs);
 
     // Gather data
     //gather_attributes(&s.ast().data);
 
-    // Helper functions for the builder architecture
-    let id = s.ast().ident.clone();
-    let builder_id: syn::Type =
-        syn::parse_str(format!("{}Builder", s.ast().ident.to_string()).as_str()).unwrap();
-    let builder_func: syn::Expr =
-        syn::parse_str(format!("{}Builder::default()", s.ast().ident.to_string()).as_str())
-            .unwrap();
+    // Generate helper functions when deriving Builder
     let builder = match params.builder {
-        true => quote! {
-            impl #impl_generics #id #ty_generics #where_clause {
-                pub fn builder() -> #builder_id #ty_generics {
-                    #builder_func
-                }
-            }
-
-            impl #impl_generics #builder_id #ty_generics #where_clause {
-                pub fn exec<C: Client>(
-                    &self,
-                    client: &C,
-                ) -> Result<Option<#result>, ClientError> {
-                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client)
-                }
-
-                pub fn exec_mut<C: Client, M: MiddleWare>(
-                    &self,
-                    client: &C,
-                    middle: &M,
-                ) -> Result<Option<#result>, ClientError> {
-                    self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle)
-                }
-            }
-        },
+        true => builder(&s.ast().ident, &result, &s.ast().generics),
         false => quote! {},
     };
+
+    // Capture generic information
+    let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
 
     // Generate Endpoint implementation
     let const_name = format!("_DERIVE_Endpoint_FOR_{}", id.to_string());
@@ -229,4 +234,4 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     }
 }
 
-synstructure::decl_derive!([Endpoint, attributes(endpoint, query)] => endpoint_derive);
+synstructure::decl_derive!([Endpoint, attributes(endpoint)] => endpoint_derive);
