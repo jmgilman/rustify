@@ -10,6 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2021-08-18
 
 ### Added
+- Middleware support for Endpoints for mutating requests and responses during
+  the execution process
+- Initial infrastructure for supporting more than JSON requests/responses
+- Support for getting raw responses back using `Endpoint::exec_raw()`
+- Documentation for `rustify_derive`
+- Compiltation tests for testing `rustify_derive`
+
+### Changed
+- Internal refactoring to improve readability and testing
+- Moves helper functions of out `Endpoint` scope
+- Substitutes `()` for `EmptyEndpointResponse`
+- Removes `strip` option and prefers using middleware
+- Renames `Endpoint::execute()` to `Endpoint::exec()`
+
+### Removed
+- Support for middleware in `ReqwestClient`
+
+### Added
 - Query parameters can now be specified using the `query` attribute
 
 ### Changed
