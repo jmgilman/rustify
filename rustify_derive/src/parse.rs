@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::Error;
-use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta};
+use proc_macro2::Span;
+use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type};
 
 /// Returns all [Meta] values contained in a [Meta::List].
 ///
@@ -138,4 +139,22 @@ pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>
     }
 
     Ok(result)
+}
+
+/// Parses the fields of a struct and returns a map of field name -> type
+#[allow(dead_code)]
+pub fn field_types(data: &syn::Data) -> Result<HashMap<Ident, Type>, Error> {
+    if let syn::Data::Struct(data) = data {
+        Ok(data
+            .fields
+            .iter()
+            .map(|f| f.ident.clone().unwrap())
+            .zip(data.fields.iter().map(|f| f.ty.clone()))
+            .collect::<HashMap<Ident, Type>>())
+    } else {
+        Err(Error::new(
+            Span::call_site(),
+            "Failed parsing struct fields",
+        ))
+    }
 }

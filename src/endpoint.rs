@@ -86,13 +86,19 @@ pub trait Endpoint: Debug + Serialize + Sized {
         Vec::new()
     }
 
+    /// Optional raw request data that will be sent instead of serializing the
+    /// struct.
+    fn data(&self) -> Option<&[u8]> {
+        None
+    }
+
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized response as defined by [Endpoint::Result].
     fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let req = build_request(self, client.base())?;
+        let req = build_request(self, client.base(), self.data())?;
         let resp = client.execute(req)?;
         parse(self, &resp.body)
     }
@@ -107,7 +113,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let mut req = build_request(self, client.base())?;
+        let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req)?;
@@ -121,7 +127,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let req = build_request(self, client.base())?;
+        let req = build_request(self, client.base(), self.data())?;
 
         let resp = client.execute(req)?;
         Ok(resp.body)
@@ -137,7 +143,7 @@ pub trait Endpoint: Debug + Serialize + Sized {
         log::info!("Executing endpoint");
         log::debug! {"Endpoint: {:#?}", self};
 
-        let mut req = build_request(self, client.base())?;
+        let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req)?;
@@ -152,24 +158,31 @@ pub trait MiddleWare {
 }
 
 /// Builds a [Request] using the given [Endpoint] and base URL
-fn build_request<E: Endpoint>(endpoint: &E, base: &str) -> Result<Request, ClientError> {
+fn build_request<E: Endpoint>(
+    endpoint: &E,
+    base: &str,
+    data: Option<&[u8]>,
+) -> Result<Request, ClientError> {
     let url = build_url(endpoint, base)?;
     let method = endpoint.method();
     let query = endpoint.query();
     let headers = Vec::new();
-    let body = match E::REQUEST_BODY_TYPE {
-        RequestType::JSON => {
-            let parse_data =
-                serde_json::to_string(endpoint).map_err(|e| ClientError::DataParseError {
-                    source: Box::new(e),
-                })?;
-            match parse_data.as_str() {
-                "null" => "".to_string(),
-                "{}" => "".to_string(),
-                _ => parse_data,
+    let body = match data {
+        Some(d) => d.to_vec(),
+        None => match E::REQUEST_BODY_TYPE {
+            RequestType::JSON => {
+                let parse_data =
+                    serde_json::to_string(endpoint).map_err(|e| ClientError::DataParseError {
+                        source: Box::new(e),
+                    })?;
+                match parse_data.as_str() {
+                    "null" => "".to_string(),
+                    "{}" => "".to_string(),
+                    _ => parse_data,
+                }
+                .into_bytes()
             }
-            .into_bytes()
-        }
+        },
     };
 
     Ok(Request {

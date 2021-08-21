@@ -23,6 +23,7 @@ use syn::{self, Generics, Ident, Meta, Type};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
+const DATA_NAME: &str = "data";
 const QUERY_NAME: &str = "query";
 
 /// Generates the path string for the endpoint.
@@ -117,6 +118,39 @@ fn gen_query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream
         }
         true => quote! {},
     }
+}
+
+fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::TokenStream, Error> {
+    // Find data fields
+    let mut data_fields = Vec::<&Ident>::new();
+    for (key, value) in fields.iter() {
+        for attr in value.iter() {
+            if attr.path().is_ident(DATA_NAME) {
+                data_fields.push(key);
+            }
+        }
+    }
+
+    // Return if empty
+    if data_fields.is_empty() {
+        return Ok(quote! {});
+    }
+
+    // Only allow a single data field
+    if data_fields.len() > 1 {
+        return Err(Error::new(
+            data_fields[1].span(),
+            "May only mark one field as the data field",
+        ));
+    }
+
+    // Determine data type and return correct enum variant
+    let id = data_fields[0];
+    Ok(quote! {
+        fn data(&self) -> Option<&[u8]> {
+            Some(&self.#id)
+        }
+    })
 }
 
 /// Generates `builder()` and `exec_*` helper methods for use with
@@ -234,7 +268,10 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let query = gen_query(&field_attrs);
 
     // Gather data
-    //gather_attributes(&s.ast().data);
+    let data = match gen_data(&field_attrs) {
+        Ok(v) => v,
+        Err(e) => return e.into_tokens(),
+    };
 
     // Generate helper functions when deriving Builder
     let builder = match params.builder {
@@ -270,6 +307,8 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
                 }
 
                 #query
+
+                #data
             }
 
             #builder
