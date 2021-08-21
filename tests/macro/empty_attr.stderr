@@ -1,0 +1,19 @@
+error: Cannot parse attribute as list
+ --> $DIR/empty_attr.rs:6:3
+  |
+6 | #[endpoint]
+  |   ^^^^^^^^
+
+error: Attribute cannot be empty
+  --> $DIR/empty_attr.rs:10:3
+   |
+10 | #[endpoint()]
+   |   ^^^^^^^^
+
+warning: unused import: `rustify::endpoint::Endpoint`
+ --> $DIR/empty_attr.rs:1:5
+  |
+1 | use rustify::endpoint::Endpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default

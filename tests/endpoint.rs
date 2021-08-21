@@ -2,55 +2,15 @@ mod common;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use common::TestServer;
+use common::{Middle, TestResponse, TestServer};
 use derive_builder::Builder;
 use httpmock::prelude::*;
-use rustify::{
-    endpoint::{Endpoint, MiddleWare},
-    errors::ClientError,
-};
+use rustify::{endpoint::Endpoint, errors::ClientError};
 use rustify_derive::Endpoint;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use serde_with::skip_serializing_none;
 use test_env_log::test;
-
-#[derive(Debug, Deserialize)]
-struct TestResponse {
-    age: u8,
-}
-
-#[derive(Debug, Deserialize)]
-struct TestWrapper {
-    result: Value,
-}
-
-struct Middle {}
-impl MiddleWare for Middle {
-    fn request<E: Endpoint>(
-        &self,
-        _: &E,
-        req: &mut rustify::client::Request,
-    ) -> Result<(), ClientError> {
-        req.headers
-            .push(("X-API-Token".to_string(), "mytoken".to_string()));
-        Ok(())
-    }
-    fn response<E: Endpoint>(
-        &self,
-        _: &E,
-        resp: &mut rustify::client::Response,
-    ) -> Result<(), ClientError> {
-        let err_body = resp.body.clone();
-        let wrapper: TestWrapper =
-            serde_json::from_slice(&resp.body).map_err(|e| ClientError::ResponseParseError {
-                source: Box::new(e),
-                content: String::from_utf8(err_body).ok(),
-            })?;
-        resp.body = wrapper.result.to_string().as_bytes().to_vec();
-        Ok(())
-    }
-}
 
 #[test]
 fn test_path() {
@@ -71,7 +31,7 @@ fn test_path() {
 }
 
 #[test]
-fn test_path_method() {
+fn test_method() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {}
@@ -89,7 +49,7 @@ fn test_path_method() {
 }
 
 #[test]
-fn test_path_query() {
+fn test_query() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
@@ -120,7 +80,7 @@ fn test_path_query() {
 }
 
 #[test]
-fn test_path_method_with_format() {
+fn test_path_with_format() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
     struct Test {
@@ -143,7 +103,7 @@ fn test_path_method_with_format() {
 }
 
 #[test]
-fn test_path_method_with_data() {
+fn test_data() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
@@ -167,7 +127,34 @@ fn test_path_method_with_data() {
 }
 
 #[test]
-fn test_path_result() {
+fn test_raw_data() {
+    #[derive(Debug, Endpoint, Serialize)]
+    #[endpoint(path = "test/path/{self.name}", method = "POST")]
+    struct Test {
+        name: String,
+        #[endpoint(data)]
+        data: Vec<u8>,
+    }
+
+    let t = TestServer::default();
+    let e = Test {
+        name: "test".to_string(),
+        data: "somebits".as_bytes().to_vec(),
+    };
+    let m = t.server.mock(|when, then| {
+        when.method(POST)
+            .path("/test/path/test")
+            .body_contains("somebits");
+        then.status(200);
+    });
+    let r = e.exec(&t.client);
+
+    m.assert();
+    assert!(r.is_ok())
+}
+
+#[test]
+fn test_result() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -232,7 +219,7 @@ fn test_mutate() {
 }
 
 #[test]
-fn test_raw() {
+fn test_raw_response() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}

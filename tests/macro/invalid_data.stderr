@@ -1,0 +1,23 @@
+error: May only mark one field as the data field
+  --> $DIR/invalid_data.rs:20:9
+   |
+20 |     pub data_two: Vec<u8>,
+   |         ^^^^^^^^
+
+error[E0308]: mismatched types
+ --> $DIR/invalid_data.rs:5:17
+  |
+5 | #[derive(Debug, Endpoint, Serialize)]
+  |                 ^^^^^^^^ expected slice `[u8]`, found struct `std::string::String`
+  |
+  = note: expected reference `&[u8]`
+             found reference `&std::string::String`
+  = note: this error originates in the derive macro `Endpoint` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused import: `rustify::endpoint::Endpoint`
+ --> $DIR/invalid_data.rs:1:5
+  |
+1 | use rustify::endpoint::Endpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
