@@ -5,7 +5,6 @@ use crate::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use std::fmt::Debug;
 use url::Url;
 
 /// Represents a remote HTTP endpoint which can be executed using a
@@ -60,7 +59,7 @@ use url::Url;
 /// // It assumes an empty response
 /// let result = endpoint.exec(&client);
 /// ```
-pub trait Endpoint: Debug + Serialize + Sized {
+pub trait Endpoint: Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
     /// automatically be deserialized to. This type must implement
     /// [serde::Deserialize].
@@ -96,7 +95,6 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// deserialized response as defined by [Endpoint::Result].
     fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
-        log::debug! {"Endpoint: {:#?}", self};
 
         let req = build_request(self, client.base(), self.data())?;
         let resp = client.execute(req)?;
@@ -111,7 +109,6 @@ pub trait Endpoint: Debug + Serialize + Sized {
         middle: &M,
     ) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
-        log::debug! {"Endpoint: {:#?}", self};
 
         let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
@@ -125,7 +122,6 @@ pub trait Endpoint: Debug + Serialize + Sized {
     /// response as a byte array.
     fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
         log::info!("Executing endpoint");
-        log::debug! {"Endpoint: {:#?}", self};
 
         let req = build_request(self, client.base(), self.data())?;
 
@@ -141,7 +137,6 @@ pub trait Endpoint: Debug + Serialize + Sized {
         middle: &M,
     ) -> Result<Vec<u8>, ClientError> {
         log::info!("Executing endpoint");
-        log::debug! {"Endpoint: {:#?}", self};
 
         let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
