@@ -7,13 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2021-08-18
+## [0.3.0] - 2021-08-21
 
 ### Added
 - Middleware support for Endpoints for mutating requests and responses during
   the execution process
 - Initial infrastructure for supporting more than JSON requests/responses
 - Support for getting raw responses back using `Endpoint::exec_raw()`
+- Support for sending raw requests using `data` attribute
 - Documentation for `rustify_derive`
 - Compiltation tests for testing `rustify_derive`
 
@@ -26,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Support for middleware in `ReqwestClient`
+
+## [0.2.0] - 2021-08-18
 
 ### Added
 - Query parameters can now be specified using the `query` attribute
@@ -42,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jmgilman/rustify/releases/tag/v0.3.0
 [0.2.0]: https://github.com/jmgilman/rustify/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jmgilman/rustify/releases/tag/v0.1.0

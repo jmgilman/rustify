@@ -1,6 +1,6 @@
 [package]
 name = "rustify"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Joshua Gilman <joshuagilman@gmail.com>"]
 description = "A Rust crate which provides an abstraction layer over HTTP REST API endpoints."
 license = "MIT"
