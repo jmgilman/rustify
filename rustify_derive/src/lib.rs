@@ -267,7 +267,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Generate query function
     let query = gen_query(&field_attrs);
 
-    // Gather data
+    // Generate data
     let data = match gen_data(&field_attrs) {
         Ok(v) => v,
         Err(e) => return e.into_tokens(),
