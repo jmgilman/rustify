@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2021-08-21
+
 ### Added
 - Execution methods for returning an Endpoint result wrapped in a generic
   wrapper
@@ -52,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.3.1...HEAD
+[0.3.0]: https://github.com/jmgilman/rustify/releases/tag/v0.3.1
 [0.3.0]: https://github.com/jmgilman/rustify/releases/tag/v0.3.0
 [0.2.0]: https://github.com/jmgilman/rustify/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jmgilman/rustify/releases/tag/v0.1.0
