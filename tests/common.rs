@@ -1,10 +1,10 @@
 use httpmock::prelude::*;
 use rustify::{
     clients::reqwest::ReqwestClient,
-    endpoint::{Endpoint, MiddleWare},
+    endpoint::{Endpoint, MiddleWare, Wrapper},
     errors::ClientError,
 };
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::Value;
 
 pub struct TestServer {
@@ -41,6 +41,15 @@ pub struct TestResponse {
 #[derive(Debug, Deserialize)]
 pub struct TestWrapper {
     pub result: Value,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TestGenericWrapper<T> {
+    pub result: T,
+}
+
+impl<T: DeserializeOwned> Wrapper for TestGenericWrapper<T> {
+    type Value = T;
 }
 
 pub struct Middle {}

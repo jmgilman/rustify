@@ -2,7 +2,7 @@ mod common;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use common::{Middle, TestResponse, TestServer};
+use common::{Middle, TestGenericWrapper, TestResponse, TestServer};
 use derive_builder::Builder;
 use httpmock::prelude::*;
 use rustify::{endpoint::Endpoint, errors::ClientError};
@@ -216,6 +216,28 @@ fn test_mutate() {
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().age, 30);
+}
+
+#[test]
+fn test_wrapper() {
+    #[derive(Debug, Endpoint, Serialize)]
+    #[endpoint(path = "test/path", result = "TestResponse")]
+    struct Test {}
+
+    fn strip<T>(wrapper: TestGenericWrapper<T>) -> T {
+        wrapper.result
+    }
+
+    let t = TestServer::default();
+    let e = Test {};
+    let m = t.server.mock(|when, then| {
+        when.method(GET).path("/test/path");
+        then.status(200).json_body(json!({"result": {"age": 30}}));
+    });
+    let r = e.exec_wrap(&t.client).unwrap().map(strip).unwrap();
+
+    m.assert();
+    assert_eq!(r.age, 30);
 }
 
 #[test]

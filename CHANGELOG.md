@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Execution methods for returning an Endpoint result wrapped in a generic
+  wrapper
+
+### Changed
+- Endpoints no longer need to implement `Debug`
+
 ## [0.3.0] - 2021-08-21
 
 ### Added

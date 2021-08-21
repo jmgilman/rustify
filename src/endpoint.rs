@@ -7,6 +7,18 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use url::Url;
 
+/// Represents a generic wrapper that can be applied to [Endpoint] results.
+///
+/// Some APIs use a generic wrapper when returning responses that contains
+/// information about the response and the actual response data in a subfield.
+/// This trait allows implementing a generic wrapper which can be used with
+/// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Result] in the
+/// wrapper. The only requirement is that the [Wrapper::Value] must enclose
+/// the [Endpoint::Result].
+pub trait Wrapper: DeserializeOwned {
+    type Value;
+}
+
 /// Represents a remote HTTP endpoint which can be executed using a
 /// [crate::client::Client].
 ///
@@ -118,6 +130,38 @@ pub trait Endpoint: Serialize + Sized {
         parse(self, &resp.body)
     }
 
+    /// Executes the Endpoint using the given [Client] and returns the
+    /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
+    where
+        C: Client,
+        W: Wrapper<Value = Self::Result>,
+    {
+        log::info!("Executing endpoint");
+
+        let req = build_request(self, client.base(), self.data())?;
+        let resp = client.execute(req)?;
+        parse(self, &resp.body)
+    }
+
+    /// Executes the Endpoint using the given [Client] and [MiddleWare],
+    /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
+    where
+        C: Client,
+        M: MiddleWare,
+        W: Wrapper<Value = Self::Result>,
+    {
+        log::info!("Executing endpoint");
+
+        let mut req = build_request(self, client.base(), self.data())?;
+        middle.request(self, &mut req)?;
+
+        let mut resp = client.execute(req)?;
+        middle.response(self, &mut resp)?;
+        parse(self, &resp.body)
+    }
+
     /// Executes the Endpoint using the given [Client], returning the raw
     /// response as a byte array.
     fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
@@ -210,7 +254,7 @@ fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientEr
 
 /// Parses a response body into the [Endpoint::Result], choosing a deserializer
 /// based on [Endpoint::RESPONSE_BODY_TYPE].
-fn parse<E: Endpoint>(_: &E, body: &[u8]) -> Result<Option<E::Result>, ClientError> {
+fn parse<E: Endpoint, T: DeserializeOwned>(_: &E, body: &[u8]) -> Result<Option<T>, ClientError> {
     if body.is_empty() {
         return Ok(None);
     }
