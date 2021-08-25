@@ -200,3 +200,4 @@ pub mod clients;
 pub mod endpoint;
 pub mod enums;
 pub mod errors;
+pub mod http;

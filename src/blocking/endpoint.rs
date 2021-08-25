@@ -1,10 +1,9 @@
 use crate::{
     blocking::client::Client,
-    endpoint::{build_body, build_request},
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
+    http::{build_body, build_request, parse},
 };
-use async_trait::async_trait;
 use bytes::Bytes;
 use http::Request as HttpRequest;
 use http::Response as HttpResponse;
@@ -75,8 +74,7 @@ pub trait Wrapper: DeserializeOwned {
 /// // It assumes an empty response
 /// let result = endpoint.exec(&client);
 /// ```
-#[async_trait]
-pub trait Endpoint: Send + Sync + Serialize + Sized {
+pub trait Endpoint: Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
     /// automatically be deserialized to. This type must implement
     /// [serde::Deserialize].
@@ -121,7 +119,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
             build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
         )?;
         let resp = client.execute(req)?;
-        parse(self, resp.body())
+        parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -144,7 +142,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
         let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
-        parse(self, resp.body())
+        parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
@@ -164,7 +162,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
             build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
         )?;
         let resp = client.execute(req)?;
-        parse(self, resp.body())
+        parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -188,7 +186,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
         let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
-        parse(self, resp.body())
+        parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client], returning the raw
@@ -231,7 +229,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         Ok(resp.body().clone())
     }
 }
-pub trait MiddleWare: Sync + Send {
+pub trait MiddleWare {
     fn request<E: Endpoint>(
         &self,
         endpoint: &E,
@@ -242,21 +240,4 @@ pub trait MiddleWare: Sync + Send {
         endpoint: &E,
         resp: &mut HttpResponse<Bytes>,
     ) -> Result<(), ClientError>;
-}
-
-/// Parses a response body into the [Endpoint::Result], choosing a deserializer
-/// based on [Endpoint::RESPONSE_BODY_TYPE].
-fn parse<E: Endpoint, T: DeserializeOwned>(_: &E, body: &[u8]) -> Result<Option<T>, ClientError> {
-    if body.is_empty() {
-        return Ok(None);
-    }
-
-    match E::RESPONSE_BODY_TYPE {
-        ResponseType::JSON => {
-            serde_json::from_slice(body).map_err(|e| ClientError::ResponseParseError {
-                source: Box::new(e),
-                content: String::from_utf8(body.to_vec()).ok(),
-            })
-        }
-    }
 }
