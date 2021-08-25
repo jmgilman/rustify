@@ -62,7 +62,8 @@ impl RustifyClient for Client {
     }
 
     async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
-        let request = reqwest::Request::try_from(req).unwrap();
+        let request = reqwest::Request::try_from(req)
+            .map_err(|e| ClientError::ReqwestBuildError { source: e })?;
 
         let url_err = request.url().to_string();
         let method_err = request.method().to_string();
@@ -82,7 +83,7 @@ impl RustifyClient for Client {
         for v in response.headers().into_iter() {
             headers.append::<http::header::HeaderName>(v.0.into(), v.1.into());
         }
-        Ok(http_resp
+        http_resp
             .body(
                 response
                     .bytes()
@@ -91,6 +92,8 @@ impl RustifyClient for Client {
                         source: Box::new(e),
                     })?,
             )
-            .unwrap())
+            .map_err(|e| ClientError::ResponseError {
+                source: Box::new(e),
+            })
     }
 }

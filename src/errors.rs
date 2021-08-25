@@ -1,6 +1,5 @@
 use std::error::Error as StdError;
 use thiserror::Error;
-use url::ParseError;
 
 use crate::enums::RequestMethod;
 
@@ -21,10 +20,12 @@ pub enum ClientError {
     },
     #[error("Error building HTTP request")]
     RequestBuildError {
-        source: Box<dyn StdError>,
+        source: http::Error,
         method: RequestMethod,
         url: String,
     },
+    #[error("Error building request for Reqwest crate")]
+    ReqwestBuildError { source: reqwest::Error },
     #[error("Error retrieving HTTP response")]
     ResponseError { source: Box<dyn StdError> },
     #[error("Error parsing server response as UTF-8")]
@@ -39,8 +40,10 @@ pub enum ClientError {
     },
     #[error("Server returned error")]
     ServerResponseError { code: u16, content: Option<String> },
+    #[error("Error building URL")]
+    UrlBuildError { source: http::uri::InvalidUri },
     #[error("Error serializing URL query parameters")]
     UrlQueryParseError { source: Box<dyn StdError> },
     #[error("Error parsing URL")]
-    UrlParseError { source: ParseError, url: String },
+    UrlParseError { source: url::ParseError },
 }

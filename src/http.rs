@@ -53,7 +53,7 @@ pub fn build_request(
         .method(method)
         .body(data)
         .map_err(|e| ClientError::RequestBuildError {
-            source: Box::new(e),
+            source: e,
             method: method_err,
             url: uri_err,
         })
@@ -68,10 +68,7 @@ pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<
         path,
     );
 
-    let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
-        url: base.to_string(),
-        source: e,
-    })?;
+    let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError { source: e })?;
     url.path_segments_mut().unwrap().extend(path.split('/'));
 
     {
@@ -84,7 +81,9 @@ pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<
             })?;
     }
 
-    Ok(url.to_string().parse::<Uri>().unwrap())
+    url.to_string()
+        .parse::<Uri>()
+        .map_err(|e| ClientError::UrlBuildError { source: e })
 }
 
 /// Parses a response body into the [Endpoint::Result], choosing a deserializer
