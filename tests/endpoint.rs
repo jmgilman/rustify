@@ -2,14 +2,16 @@ mod common;
 
 use std::fmt::Debug;
 
-use common::{TestGenericWrapper, TestResponse, TestServer};
+use bytes::Bytes;
+#[cfg(feature = "wrapper")]
+use common::TestGenericWrapper;
+use common::{TestResponse, TestServer};
 use derive_builder::Builder;
 use httpmock::prelude::*;
 use rustify::endpoint::Endpoint;
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-
 #[cfg(feature = "middleware")]
 use {
     common::Middle, rustify::errors::ClientError, serde::de::DeserializeOwned,
@@ -137,13 +139,14 @@ async fn test_raw_data() {
     struct Test {
         name: String,
         #[endpoint(data)]
-        data: Vec<u8>,
+        #[serde(skip)]
+        data: Bytes,
     }
 
     let t = TestServer::default();
     let e = Test {
         name: "test".to_string(),
-        data: "somebits".as_bytes().to_vec(),
+        data: Bytes::from("somebits"),
     };
     let m = t.server.mock(|when, then| {
         when.method(POST)

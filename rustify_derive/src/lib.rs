@@ -19,7 +19,7 @@ use params::Parameters;
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
-use syn::{self, Generics, Ident, Meta, Type};
+use syn::{self, Generics, Ident, Meta};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
@@ -147,8 +147,8 @@ fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::Token
     // Determine data type and return correct enum variant
     let id = data_fields[0];
     Ok(quote! {
-        fn data(&self) -> Option<&[u8]> {
-            Some(&self.#id)
+        fn data(&self) -> Option<Bytes> {
+            Some(self.#id.clone())
         }
     })
 }
@@ -159,7 +159,7 @@ fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::Token
 /// Adds an implementation to the base struct which provides a `builder` method
 /// for returning instances of the Builder variant of the struct. This removes
 /// the need to explicitely import it.
-fn gen_builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::TokenStream {
+fn gen_builder(id: &Ident, generics: &Generics) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let builder_id: syn::Type =
         syn::parse_str(format!("{}Builder", id.to_string()).as_str()).unwrap();
@@ -254,7 +254,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 
     // Generate helper functions when deriving Builder
     let builder = match params.builder {
-        true => gen_builder(&s.ast().ident, &result, &s.ast().generics),
+        true => gen_builder(&s.ast().ident, &s.ast().generics),
         false => quote! {},
     };
 
@@ -266,6 +266,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let const_ident = Ident::new(const_name.as_str(), Span::call_site());
     quote! {
         const #const_ident: () = {
+            use ::bytes::Bytes;
             use ::rustify::client::Client;
             use ::rustify::endpoint::Endpoint;
             use ::rustify::enums::{RequestMethod, RequestType, ResponseType};

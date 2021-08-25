@@ -1,14 +1,19 @@
-use bytes::Bytes;
 use httpmock::prelude::*;
 #[cfg(feature = "blocking")]
 use rustify::blocking::clients::reqwest::Client as ReqwestBlocking;
-#[cfg(feature = "middleware")]
-use rustify::endpoint::MiddleWare;
-#[cfg(feature = "wrapper")]
-use rustify::endpoint::Wrapper;
-use rustify::{clients::reqwest::Client as Reqwest, endpoint::Endpoint, errors::ClientError};
-use serde::{de::DeserializeOwned, Deserialize};
+use rustify::clients::reqwest::Client as Reqwest;
+use serde::Deserialize;
 use serde_json::Value;
+#[cfg(feature = "middleware")]
+use {
+    bytes::Bytes,
+    rustify::{
+        endpoint::{Endpoint, MiddleWare},
+        errors::ClientError,
+    },
+};
+#[cfg(feature = "wrapper")]
+use {rustify::endpoint::Wrapper, serde::de::DeserializeOwned};
 
 pub struct TestServer {
     pub server: MockServer,
@@ -82,7 +87,7 @@ impl MiddleWare for Middle {
     fn request<E: Endpoint>(
         &self,
         _: &E,
-        req: &mut http::Request<Vec<u8>>,
+        req: &mut http::Request<Bytes>,
     ) -> Result<(), ClientError> {
         req.headers_mut()
             .append("X-API-Token", http::HeaderValue::from_static("mytoken"));

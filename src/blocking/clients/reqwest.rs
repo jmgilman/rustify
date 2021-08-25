@@ -59,7 +59,7 @@ impl RustifyClient for Client {
         self.base.as_str()
     }
 
-    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+    fn send(&self, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError> {
         let request = reqwest::blocking::Request::try_from(req)
             .map_err(|e| ClientError::ReqwestBuildError { source: e })?;
 

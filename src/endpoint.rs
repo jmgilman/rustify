@@ -105,7 +105,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Optional raw request data that will be sent instead of serializing the
     /// struct.
-    fn data(&self) -> Option<&[u8]> {
+    fn data(&self) -> Option<Bytes> {
         None
     }
 
@@ -282,7 +282,7 @@ pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(
         &self,
         endpoint: &E,
-        req: &mut Request<Vec<u8>>,
+        req: &mut Request<Bytes>,
     ) -> Result<(), ClientError>;
     fn response<E: Endpoint>(
         &self,
@@ -292,7 +292,7 @@ pub trait MiddleWare: Sync + Send {
 }
 
 /// Builds a [Request] from the base URL path and [Endpoint]
-fn build<E: Endpoint>(base: &str, endpoint: &E) -> Result<Request<Vec<u8>>, ClientError> {
+fn build<E: Endpoint>(base: &str, endpoint: &E) -> Result<Request<Bytes>, ClientError> {
     crate::http::build_request(
         base,
         endpoint.path().as_str(),
@@ -308,7 +308,7 @@ fn build_mut<E: Endpoint, M: MiddleWare>(
     base: &str,
     endpoint: &E,
     middle: &M,
-) -> Result<Request<Vec<u8>>, ClientError> {
+) -> Result<Request<Bytes>, ClientError> {
     let mut req = crate::http::build_request(
         base,
         endpoint.path().as_str(),
@@ -321,10 +321,7 @@ fn build_mut<E: Endpoint, M: MiddleWare>(
     Ok(req)
 }
 
-async fn exec<C: Client>(
-    client: &C,
-    req: Request<Vec<u8>>,
-) -> Result<Response<Bytes>, ClientError> {
+async fn exec<C: Client>(client: &C, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError> {
     client.execute(req).await
 }
 
@@ -332,7 +329,7 @@ async fn exec<C: Client>(
 async fn exec_mut<C: Client, E: Endpoint, M: MiddleWare>(
     client: &C,
     endpoint: &E,
-    req: Request<Vec<u8>>,
+    req: Request<Bytes>,
     middle: &M,
 ) -> Result<Response<Bytes>, ClientError> {
     let mut resp = client.execute(req).await?;
@@ -343,7 +340,7 @@ async fn exec_mut<C: Client, E: Endpoint, M: MiddleWare>(
 #[cfg(feature = "blocking")]
 fn exec_block<C: BlockingClient>(
     client: &C,
-    req: Request<Vec<u8>>,
+    req: Request<Bytes>,
 ) -> Result<Response<Bytes>, ClientError> {
     client.execute(req)
 }
@@ -352,7 +349,7 @@ fn exec_block<C: BlockingClient>(
 fn exec_mut_block<C: BlockingClient, E: Endpoint, M: MiddleWare>(
     client: &C,
     endpoint: &E,
-    req: Request<Vec<u8>>,
+    req: Request<Bytes>,
     middle: &M,
 ) -> Result<Response<Bytes>, ClientError> {
     let mut resp = client.execute(req)?;

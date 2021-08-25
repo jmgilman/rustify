@@ -2,6 +2,7 @@ use crate::{
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
+use bytes::Bytes;
 use http::{Request, Uri};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
@@ -15,22 +16,21 @@ use url::Url;
 pub fn build_body<S: Serialize>(
     object: &S,
     ty: RequestType,
-    data: Option<&[u8]>,
-) -> Result<Vec<u8>, ClientError> {
+    data: Option<Bytes>,
+) -> Result<Bytes, ClientError> {
     match data {
-        Some(d) => Ok(d.to_vec()),
+        Some(d) => Ok(d),
         None => match ty {
             RequestType::JSON => {
                 let parse_data =
                     serde_json::to_string(object).map_err(|e| ClientError::DataParseError {
                         source: Box::new(e),
                     })?;
-                Ok(match parse_data.as_str() {
+                Ok(Bytes::from(match parse_data.as_str() {
                     "null" => "".to_string(),
                     "{}" => "".to_string(),
                     _ => parse_data,
-                }
-                .into_bytes())
+                }))
             }
         },
     }
@@ -42,8 +42,8 @@ pub fn build_request(
     path: &str,
     method: RequestMethod,
     query: Vec<(String, Value)>,
-    data: Vec<u8>,
-) -> Result<Request<Vec<u8>>, ClientError> {
+    data: Bytes,
+) -> Result<Request<Bytes>, ClientError> {
     let uri = build_url(base, path, query)?;
 
     let method_err = method.clone();

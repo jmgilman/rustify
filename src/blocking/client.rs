@@ -9,7 +9,7 @@ use http::{Request, Response};
 pub trait Client {
     /// Sends the given [Request] and returns a [Response]. Implementations
     /// should consolidate all errors into the [ClientError] type.
-    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError>;
+    fn send(&self, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError>;
 
     /// Returns the base URL the client is configured with. This is used for
     /// creating the fully qualified URLs used when executing
@@ -18,7 +18,7 @@ pub trait Client {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+    fn execute(&self, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError> {
         log::info!(
             "Client sending {} request to {} with {} bytes of data",
             req.method().to_string(),
