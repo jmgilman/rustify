@@ -1,5 +1,6 @@
+#[cfg(feature = "blocking")]
+use crate::blocking::client::Client as BlockingClient;
 use crate::{
-    blocking::client::Client as BlockingClient,
     client::Client,
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
@@ -18,6 +19,7 @@ use serde_json::Value;
 /// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Result] in the
 /// wrapper. The only requirement is that the [Wrapper::Value] must enclose
 /// the [Endpoint::Result].
+#[cfg(feature = "wrapper")]
 pub trait Wrapper: DeserializeOwned {
     type Value;
 }
@@ -119,6 +121,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized response as defined by [Endpoint::Result].
+    #[cfg(feature = "middleware")]
     async fn exec_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
@@ -133,6 +136,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    #[cfg(feature = "wrapper")]
     async fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: Client,
@@ -147,6 +151,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    #[cfg(feature = "middleware")]
     async fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: Client,
@@ -172,6 +177,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the raw response as a byte array.
+    #[cfg(feature = "middleware")]
     async fn exec_raw_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
@@ -186,6 +192,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result].
+    #[cfg(feature = "blocking")]
     fn exec_block<C: BlockingClient>(
         &self,
         client: &C,
@@ -199,6 +206,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized response as defined by [Endpoint::Result].
+    #[cfg(feature = "blocking")]
     fn exec_mut_block<C: BlockingClient, M: MiddleWare>(
         &self,
         client: &C,
@@ -213,6 +221,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    #[cfg(feature = "blocking, wrapper")]
     fn exec_wrap_block<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
@@ -227,6 +236,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    #[cfg(feature = "blocking, wrapper")]
     fn exec_wrap_mut_block<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
@@ -242,6 +252,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client], returning the raw
     /// response as a byte array.
+    #[cfg(feature = "blocking")]
     fn exec_raw_block<C: BlockingClient>(&self, client: &C) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
@@ -252,6 +263,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the raw response as a byte array.
+    #[cfg(feature = "blocking")]
     fn exec_raw_mut_block<C: BlockingClient, M: MiddleWare>(
         &self,
         client: &C,
@@ -264,6 +276,8 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         Ok(resp.body().clone())
     }
 }
+
+#[cfg(feature = "middleware")]
 pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(
         &self,
@@ -289,6 +303,7 @@ fn build<E: Endpoint>(base: &str, endpoint: &E) -> Result<Request<Vec<u8>>, Clie
 }
 
 /// Builds a [Request] from the base URL path and [Endpoint]
+#[cfg(feature = "middleware")]
 fn build_mut<E: Endpoint, M: MiddleWare>(
     base: &str,
     endpoint: &E,
@@ -313,6 +328,7 @@ async fn exec<C: Client>(
     client.execute(req).await
 }
 
+#[cfg(feature = "middleware")]
 async fn exec_mut<C: Client, E: Endpoint, M: MiddleWare>(
     client: &C,
     endpoint: &E,
@@ -324,6 +340,7 @@ async fn exec_mut<C: Client, E: Endpoint, M: MiddleWare>(
     Ok(resp)
 }
 
+#[cfg(feature = "blocking")]
 fn exec_block<C: BlockingClient>(
     client: &C,
     req: Request<Vec<u8>>,
@@ -331,6 +348,7 @@ fn exec_block<C: BlockingClient>(
     client.execute(req)
 }
 
+#[cfg(feature = "blocking")]
 fn exec_mut_block<C: BlockingClient, E: Endpoint, M: MiddleWare>(
     client: &C,
     endpoint: &E,

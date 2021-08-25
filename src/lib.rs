@@ -64,9 +64,9 @@
 //! ## Advanced Usage
 //!
 //! This examples demonstrates the complexity available using the full suite of
-//! options offered by the macro:
+//! options offered by the macro (this requires the `middleware` feature):
 //!
-//! ```rust
+//! ```ignore
 //! use bytes::Bytes;
 //! use derive_builder::Builder;
 //! use rustify::clients::reqwest::Client;
@@ -210,6 +210,7 @@
 //! [1]: https://docs.rs/derive_builder/latest/derive_builder/
 //! [2]: https://docs.rs/serde_with/1.9.4/serde_with/attr.skip_serializing_none.html
 
+#[cfg(feature = "blocking")]
 pub mod blocking;
 pub mod client;
 pub mod clients;

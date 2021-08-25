@@ -21,9 +21,9 @@ and deserializing the result. A derive macro is provided to keep code DRY.
 
 Rustify provides both a trait for implementing API endpoints as well as clients
 for executing requests against the defined endpoints. This crate targets `async`
-first, however, blocking clients can be found in `rustify::blocking::clients`.
+first, however, blocking support can be enabled with the `blocking` feature flag.
 Additionally, the `Endpoint` trait offers both `async` and blocking variants
-of each execution method.
+of each execution method (blocking methods are available when flag is enabled).
 
 Presently, rustify only supports JSON serialization and generally assumes the
 remote endpoint accepts and responds with JSON. Raw byte data can be sent
@@ -79,7 +79,7 @@ assert!(result.is_ok());
 ## Advanced Usage
 
 This examples demonstrates the complexity available using the full suite of
-options offered by the macro:
+options offered by the macro (this requires the `middleware` feature):
 
 ```rust
 use bytes::Bytes;
@@ -216,6 +216,16 @@ let endpoint = Test::builder()
     .build()
     .unwrap()
 ```
+
+## Features
+The following features are available for this crate:
+
+* `blocking`: Enables the blocking variants of `Client`s as well as the blocking
+   `exec()` functions in `Endpoint`s. 
+* `middleware`: Enables using `MiddleWare` for modifying requests/responses
+  during `Endpoint` execution.
+* `wrapper`: Enables using a `Wrapper` to wrap responses from `Endpoint`
+  execution.
 
 ## Error Handling
 
