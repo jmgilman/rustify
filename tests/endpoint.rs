@@ -190,7 +190,12 @@ async fn test_builder() {
         when.method(POST).path("/test/path");
         then.status(200);
     });
-    let r = Test::builder().name("test").exec(&t.client).await;
+    let r = Test::builder()
+        .name("test")
+        .build()
+        .unwrap()
+        .exec(&t.client)
+        .await;
 
     m.assert();
     assert!(r.is_ok());

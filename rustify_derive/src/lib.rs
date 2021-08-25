@@ -159,10 +159,6 @@ fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::Token
 /// Adds an implementation to the base struct which provides a `builder` method
 /// for returning instances of the Builder variant of the struct. This removes
 /// the need to explicitely import it.
-///
-/// Adds an implementation to the Builder varaint of the struct which adds the
-/// various `exec()` methods directly to the Builder. This allows circumventing
-/// the need to `build()` before executing the endpoint.
 fn gen_builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let builder_id: syn::Type =
@@ -174,23 +170,6 @@ fn gen_builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::T
         impl #impl_generics #id #ty_generics #where_clause {
             pub fn builder() -> #builder_id #ty_generics {
                 #builder_func
-            }
-        }
-
-        impl #impl_generics #builder_id #ty_generics #where_clause {
-            pub async fn exec<C: Client>(
-                &self,
-                client: &C,
-            ) -> Result<Option<#result>, ClientError> {
-                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client).await
-            }
-
-            pub async fn exec_mut<C: Client, M: MiddleWare>(
-                &self,
-                client: &C,
-                middle: &M,
-            ) -> Result<Option<#result>, ClientError> {
-                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle).await
             }
         }
     }
