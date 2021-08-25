@@ -1,11 +1,7 @@
+use crate::client::HTTP_SUCCESS_CODES;
 use crate::errors::ClientError;
 use bytes::Bytes;
-use http::Request as HttpRequest;
-use http::Response as HttpResponse;
-use std::ops::RangeInclusive;
-
-/// An array of HTTP response codes which indicate a successful response
-const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
+use http::{Request, Response};
 
 /// Represents an HTTP client which is capable of executing
 /// [Endpoints][crate::endpoint::Endpoint] by sending the [Request] generated
@@ -13,7 +9,7 @@ const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
 pub trait Client {
     /// Sends the given [Request] and returns a [Response]. Implementations
     /// should consolidate all errors into the [ClientError] type.
-    fn send(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError>;
+    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError>;
 
     /// Returns the base URL the client is configured with. This is used for
     /// creating the fully qualified URLs used when executing
@@ -22,10 +18,10 @@ pub trait Client {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    fn execute(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError> {
+    fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
         log::info!(
-            "Client sending {:#?} request to {} with {} bytes of data",
-            req.method(),
+            "Client sending {} request to {} with {} bytes of data",
+            req.method().to_string(),
             req.uri(),
             req.body().len(),
         );

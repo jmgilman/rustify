@@ -1,8 +1,7 @@
 use crate::{client::Client as RustifyClient, errors::ClientError};
 use async_trait::async_trait;
 use bytes::Bytes;
-use http::Request as HttpRequest;
-use http::Response as HttpResponse;
+use http::{Request, Response};
 use std::convert::TryFrom;
 
 /// A client based on the
@@ -62,7 +61,7 @@ impl RustifyClient for Client {
         self.base.as_str()
     }
 
-    async fn send(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError> {
+    async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
         let request = reqwest::Request::try_from(req).unwrap();
 
         let url_err = request.url().to_string();

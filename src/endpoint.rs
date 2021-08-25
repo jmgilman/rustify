@@ -6,8 +6,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use bytes::Bytes;
-use http::Request as HttpRequest;
-use http::Response as HttpResponse;
+use http::{Request, Response};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
@@ -235,11 +234,11 @@ pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(
         &self,
         endpoint: &E,
-        req: &mut HttpRequest<Vec<u8>>,
+        req: &mut Request<Vec<u8>>,
     ) -> Result<(), ClientError>;
     fn response<E: Endpoint>(
         &self,
         endpoint: &E,
-        resp: &mut HttpResponse<Bytes>,
+        resp: &mut Response<Bytes>,
     ) -> Result<(), ClientError>;
 }

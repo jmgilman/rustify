@@ -1,14 +1,11 @@
-use crate::{enums::RequestMethod, errors::ClientError};
+use crate::errors::ClientError;
 use async_trait::async_trait;
 use bytes::Bytes;
-use http::Request as HttpRequest;
-use http::Response as HttpResponse;
-use serde_json::Value;
+use http::{Request, Response};
 use std::ops::RangeInclusive;
-use url::Url;
 
 /// An array of HTTP response codes which indicate a successful response
-const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
+pub const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
 
 /// Represents an HTTP client which is capable of executing
 /// [Endpoints][crate::endpoint::Endpoint] by sending the [Request] generated
@@ -17,7 +14,7 @@ const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
 pub trait Client: Sync + Send {
     /// Sends the given [Request] and returns a [Response]. Implementations
     /// should consolidate all errors into the [ClientError] type.
-    async fn send(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError>;
+    async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError>;
 
     /// Returns the base URL the client is configured with. This is used for
     /// creating the fully qualified URLs used when executing
@@ -26,10 +23,10 @@ pub trait Client: Sync + Send {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    async fn execute(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError> {
+    async fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
         log::info!(
-            "Client sending {:#?} request to {} with {} bytes of data",
-            req.method(),
+            "Client sending {} request to {} with {} bytes of data",
+            req.method().to_string(),
             req.uri(),
             req.body().len(),
         );
@@ -52,22 +49,4 @@ pub trait Client: Sync + Send {
         // Parse response content
         Ok(response)
     }
-}
-
-/// Represents an HTTP request
-#[derive(Debug, Clone)]
-pub struct Request {
-    pub url: Url,
-    pub method: RequestMethod,
-    pub query: Vec<(String, Value)>,
-    pub headers: Vec<(String, String)>,
-    pub body: Vec<u8>,
-}
-
-/// Represents an HTTP response
-#[derive(Debug, Clone)]
-pub struct Response {
-    pub url: Url,
-    pub code: u16,
-    pub body: Vec<u8>,
 }

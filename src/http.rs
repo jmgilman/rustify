@@ -2,12 +2,16 @@ use crate::{
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
-use http::Request as HttpRequest;
-use http::Uri;
+use http::{Request, Uri};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use url::Url;
 
+/// Builds the body of a HTTP request in byte form using the given input.
+///
+/// If `data` is not None, the contents of data will be returned. Otherwise,
+/// the `object` will be attempted to be serialized to a byte array using the
+/// given [RequestType].
 pub fn build_body<S: Serialize>(
     object: &S,
     ty: RequestType,
@@ -39,12 +43,12 @@ pub fn build_request(
     method: RequestMethod,
     query: Vec<(String, Value)>,
     data: Vec<u8>,
-) -> Result<HttpRequest<Vec<u8>>, ClientError> {
+) -> Result<Request<Vec<u8>>, ClientError> {
     let uri = build_url(base, path, query)?;
 
     let method_err = method.clone();
     let uri_err = uri.to_string();
-    HttpRequest::builder()
+    Request::builder()
         .uri(uri)
         .method(method)
         .body(data)

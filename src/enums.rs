@@ -8,6 +8,7 @@ pub enum RequestMethod {
     POST,
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<http::Method> for RequestMethod {
     fn into(self) -> http::Method {
         match self {
