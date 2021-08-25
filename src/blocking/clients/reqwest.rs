@@ -1,4 +1,4 @@
-use crate::{client::ClientBlocking, enums::RequestMethod, errors::ClientError};
+use crate::{blocking::client::Client as RustifyClient, enums::RequestMethod, errors::ClientError};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Method,
@@ -109,7 +109,7 @@ impl Client {
     }
 }
 
-impl ClientBlocking for Client {
+impl RustifyClient for Client {
     fn base(&self) -> &str {
         self.base.as_str()
     }

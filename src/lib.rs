@@ -194,6 +194,7 @@
 //! [3]: https://docs.rs/derive_builder/latest/derive_builder/
 //! [4]: https://docs.rs/serde_with/1.9.4/serde_with/attr.skip_serializing_none.html
 
+pub mod blocking;
 pub mod client;
 pub mod clients;
 pub mod endpoint;

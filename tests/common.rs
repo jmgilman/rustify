@@ -1,6 +1,6 @@
 use httpmock::prelude::*;
 use rustify::{
-    clients::blocking::reqwest::Client as ReqwestBlocking,
+    blocking::clients::reqwest::Client as ReqwestBlocking,
     clients::reqwest::Client as Reqwest,
     endpoint::{Endpoint, MiddleWare, Wrapper},
     errors::ClientError,

@@ -1,5 +1,6 @@
 use crate::{
-    client::{Client, Request, Response},
+    blocking::client::Client,
+    client::{Request, Response},
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
@@ -107,17 +108,17 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized response as defined by [Endpoint::Result].
-    async fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
+    fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build_request(self, client.base(), self.data())?;
-        let resp = client.execute(req).await?;
+        let resp = client.execute(req)?;
         parse(self, &resp.body)
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized response as defined by [Endpoint::Result].
-    async fn exec_mut<C: Client, M: MiddleWare>(
+    fn exec_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
         middle: &M,
@@ -127,14 +128,14 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
 
-        let mut resp = client.execute(req).await?;
+        let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
         parse(self, &resp.body)
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    async fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
+    fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: Client,
         W: Wrapper<Value = Self::Result>,
@@ -142,13 +143,13 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         log::info!("Executing endpoint");
 
         let req = build_request(self, client.base(), self.data())?;
-        let resp = client.execute(req).await?;
+        let resp = client.execute(req)?;
         parse(self, &resp.body)
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    async fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
+    fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: Client,
         M: MiddleWare,
@@ -159,25 +160,25 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
 
-        let mut resp = client.execute(req).await?;
+        let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
         parse(self, &resp.body)
     }
 
     /// Executes the Endpoint using the given [Client], returning the raw
     /// response as a byte array.
-    async fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
+    fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build_request(self, client.base(), self.data())?;
 
-        let resp = client.execute(req).await?;
+        let resp = client.execute(req)?;
         Ok(resp.body)
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the raw response as a byte array.
-    async fn exec_raw_mut<C: Client, M: MiddleWare>(
+    fn exec_raw_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
         middle: &M,
@@ -187,11 +188,12 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         let mut req = build_request(self, client.base(), self.data())?;
         middle.request(self, &mut req)?;
 
-        let mut resp = client.execute(req).await?;
+        let mut resp = client.execute(req)?;
         middle.response(self, &mut resp)?;
         Ok(resp.body)
     }
 }
+
 pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(&self, endpoint: &E, req: &mut Request) -> Result<(), ClientError>;
     fn response<E: Endpoint>(&self, endpoint: &E, resp: &mut Response) -> Result<(), ClientError>;
