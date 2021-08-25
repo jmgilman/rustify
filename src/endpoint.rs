@@ -54,7 +54,7 @@ pub trait Wrapper: DeserializeOwned {
 ///
 /// # Example
 /// ```
-/// use rustify::clients::reqwest::ReqwestClient;
+/// use rustify::clients::reqwest::Client;
 /// use rustify::endpoint::Endpoint;
 /// use rustify_derive::Endpoint;
 /// use serde::Serialize;
@@ -64,7 +64,7 @@ pub trait Wrapper: DeserializeOwned {
 /// struct MyEndpoint {}
 ///
 /// // Configure a client with a base URL of http://myapi.com
-/// let client = ReqwestClient::default("http://myapi.com");
+/// let client = Client::default("http://myapi.com");
 ///     
 /// // Construct a new instance of our Endpoint
 /// let endpoint = MyEndpoint {};

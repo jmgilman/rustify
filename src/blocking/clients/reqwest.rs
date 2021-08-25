@@ -13,7 +13,7 @@ use std::convert::TryFrom;
 ///
 /// # Example
 /// ```
-/// use rustify::clients::reqwest::ReqwestClient;
+/// use rustify::blocking::clients::reqwest::Client;
 /// use rustify::endpoint::Endpoint;
 /// use rustify_derive::Endpoint;
 /// use serde::Serialize;
@@ -22,9 +22,9 @@ use std::convert::TryFrom;
 /// #[endpoint(path = "my/endpoint")]
 /// struct MyEndpoint {}
 ///
-/// let client = ReqwestClient::default("http://myapi.com");
+/// let client = Client::default("http://myapi.com");
 /// let endpoint = MyEndpoint {};
-/// let result = endpoint.exec(&client);
+/// let result = endpoint.exec_block(&client);
 /// ```
 ///
 /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html
