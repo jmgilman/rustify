@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Support for `async`
+- Feature flags for blocking, middleware, and wrapping
+
+### Changed
+- Blocking clients have been moved to `rustify::blocking` and are disabled by
+  default
+- All `Endpoint` execution methods are now `async` by default
+- Removes internal implementation of `Request` and `Response` and instead opts
+  for using `http::Request` and `http::Response`
+- Large amounts of internal refactoring to reduce repeated code and create
+  smaller function footprints
+- The `MiddleWare` and `Wrapper` implementations are now behind a feature flag
+  and disabled by default
+
+### Removed
+- The `builder` attribute no longer adds `exec()` methods to the builder variant
+  of an `Endpoint`
+
 ## [0.3.1] - 2021-08-21
 
 ### Added
