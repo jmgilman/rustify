@@ -178,19 +178,19 @@ fn gen_builder(id: &Ident, result: &Type, generics: &Generics) -> proc_macro2::T
         }
 
         impl #impl_generics #builder_id #ty_generics #where_clause {
-            pub fn exec<C: Client>(
+            pub async fn exec<C: Client>(
                 &self,
                 client: &C,
             ) -> Result<Option<#result>, ClientError> {
-                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client)
+                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec(client).await
             }
 
-            pub fn exec_mut<C: Client, M: MiddleWare>(
+            pub async fn exec_mut<C: Client, M: MiddleWare>(
                 &self,
                 client: &C,
                 middle: &M,
             ) -> Result<Option<#result>, ClientError> {
-                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle)
+                self.build().map_err(|e| { ClientError::EndpointBuildError { source: Box::new(e)}})?.exec_mut(client, middle).await
             }
         }
     }

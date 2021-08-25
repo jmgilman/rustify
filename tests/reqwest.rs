@@ -1,4 +1,4 @@
-mod common;
+/* mod common;
 
 use common::TestServer;
 use httpmock::prelude::*;
@@ -22,4 +22,4 @@ fn test_server_error() {
 
     m.assert();
     assert!(r.is_err());
-}
+} */

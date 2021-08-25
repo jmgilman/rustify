@@ -10,10 +10,9 @@ use rustify_derive::Endpoint;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use serde_with::skip_serializing_none;
-use test_env_log::test;
 
-#[test]
-fn test_path() {
+#[tokio::test]
+async fn test_path() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path")]
     struct Test {}
@@ -24,14 +23,14 @@ fn test_path() {
         when.method(GET).path("/test/path");
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_method() {
+#[tokio::test]
+async fn test_method() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {}
@@ -42,14 +41,14 @@ fn test_method() {
         when.method(POST).path("/test/path");
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_query() {
+#[tokio::test]
+async fn test_query() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
@@ -73,14 +72,14 @@ fn test_query() {
             .query_param_exists("age");
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_path_with_format() {
+#[tokio::test]
+async fn test_path_with_format() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
     struct Test {
@@ -96,14 +95,14 @@ fn test_path_with_format() {
         when.method(POST).path("/test/path/test").body("");
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_data() {
+#[tokio::test]
+async fn test_data() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
@@ -120,14 +119,14 @@ fn test_data() {
             .json_body(json!({ "name": "test" }));
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_raw_data() {
+#[tokio::test]
+async fn test_raw_data() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
     struct Test {
@@ -147,14 +146,14 @@ fn test_raw_data() {
             .body_contains("somebits");
         then.status(200);
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok())
 }
 
-#[test]
-fn test_result() {
+#[tokio::test]
+async fn test_result() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -170,15 +169,15 @@ fn test_result() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"age": 30}));
     });
-    let r = e.exec(&t.client);
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().age, 30);
 }
 
-#[test]
-fn test_builder() {
+#[tokio::test]
+async fn test_builder() {
     #[derive(Builder, Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST", builder = "true")]
     #[builder(setter(into))]
@@ -191,14 +190,14 @@ fn test_builder() {
         when.method(POST).path("/test/path");
         then.status(200);
     });
-    let r = Test::builder().name("test").exec(&t.client);
+    let r = Test::builder().name("test").exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
 }
 
-#[test]
-fn test_mutate() {
+#[tokio::test]
+async fn test_mutate() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -211,15 +210,15 @@ fn test_mutate() {
             .header("X-API-Token", "mytoken");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_mut(&t.client, &Middle {});
+    let r = e.exec_mut(&t.client, &Middle {}).await;
 
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().age, 30);
 }
 
-#[test]
-fn test_wrapper() {
+#[tokio::test]
+async fn test_wrapper() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -234,14 +233,14 @@ fn test_wrapper() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_wrap(&t.client).unwrap().map(strip).unwrap();
+    let r = e.exec_wrap(&t.client).await.unwrap().map(strip).unwrap();
 
     m.assert();
     assert_eq!(r.age, 30);
 }
 
-#[test]
-fn test_raw_response() {
+#[tokio::test]
+async fn test_raw_response() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
     struct Test {}
@@ -253,25 +252,25 @@ fn test_raw_response() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_raw(&t.client);
+    let r = e.exec_raw(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap(), resp_data.to_string().as_bytes());
 }
 
-#[test]
-fn test_generic() {
+#[tokio::test]
+async fn test_generic() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path/{self.name}", result = "TestResponse<T>")]
     #[builder(setter(into, strip_option))]
-    struct Test<T: DeserializeOwned + Serialize + Debug> {
+    struct Test<T: DeserializeOwned + Serialize + Debug + Send + Sync> {
         #[serde(skip)]
         name: String,
         #[serde(skip)]
         #[builder(default = "None", setter(skip))]
-        data: Option<PhantomData<*const T>>,
+        data: Option<PhantomData<T>>,
     }
 
     #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -300,14 +299,15 @@ fn test_generic() {
         .name("test")
         .build()
         .unwrap()
-        .exec_mut(&t.client, &Middle {});
+        .exec_mut(&t.client, &Middle {})
+        .await;
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().unwrap().data.age, 30);
 }
 
-#[test]
-fn test_complex() {
+#[tokio::test]
+async fn test_complex() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Default, Endpoint, Serialize)]
     #[endpoint(
@@ -337,7 +337,8 @@ fn test_complex() {
         .kind("test")
         .build()
         .unwrap()
-        .exec_mut(&t.client, &Middle {});
+        .exec_mut(&t.client, &Middle {})
+        .await;
 
     m.assert();
     assert!(r.is_ok());

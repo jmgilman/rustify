@@ -1,6 +1,7 @@
 use httpmock::prelude::*;
 use rustify::{
-    clients::reqwest::ReqwestClient,
+    clients::blocking::reqwest::Client as ReqwestBlocking,
+    clients::reqwest::Client as Reqwest,
     endpoint::{Endpoint, MiddleWare, Wrapper},
     errors::ClientError,
 };
@@ -9,12 +10,17 @@ use serde_json::Value;
 
 pub struct TestServer {
     pub server: MockServer,
-    pub client: ReqwestClient,
+    pub client: Reqwest,
+}
+
+pub struct TestServerBlocking {
+    pub server: MockServer,
+    pub client: ReqwestBlocking,
 }
 
 impl TestServer {
     #[allow(dead_code)]
-    pub fn with_client(mut client: ReqwestClient) -> TestServer {
+    pub fn with_client(mut client: Reqwest) -> TestServer {
         let server = MockServer::start();
         let url = server.base_url();
         client.base = url;
@@ -28,7 +34,18 @@ impl Default for TestServer {
         let url = server.base_url();
         TestServer {
             server,
-            client: ReqwestClient::default(url.as_str()),
+            client: Reqwest::default(url.as_str()),
+        }
+    }
+}
+
+impl Default for TestServerBlocking {
+    fn default() -> Self {
+        let server = MockServer::start();
+        let url = server.base_url();
+        TestServerBlocking {
+            server,
+            client: ReqwestBlocking::default(url.as_str()),
         }
     }
 }

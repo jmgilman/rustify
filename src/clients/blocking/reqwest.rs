@@ -1,5 +1,4 @@
-use crate::{client::Client as RustifyClient, enums::RequestMethod, errors::ClientError};
-use async_trait::async_trait;
+use crate::{client::ClientBlocking, enums::RequestMethod, errors::ClientError};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Method,
@@ -34,13 +33,13 @@ use url::Url;
 ///
 /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html
 pub struct Client {
-    pub http: reqwest::Client,
+    pub http: reqwest::blocking::Client,
     pub base: String,
 }
 
 impl Client {
     /// Creates a new instance of [ReqwestClient] using the provided parameters
-    pub fn new(base: &str, http: reqwest::Client) -> Self {
+    pub fn new(base: &str, http: reqwest::blocking::Client) -> Self {
         Client {
             base: base.to_string(),
             http,
@@ -54,7 +53,7 @@ impl Client {
     pub fn default(base: &str) -> Self {
         Client {
             base: base.to_string(),
-            http: reqwest::Client::default(),
+            http: reqwest::blocking::Client::default(),
         }
     }
 
@@ -65,7 +64,7 @@ impl Client {
         query: &[(String, Value)],
         headers: &[(String, String)],
         data: Vec<u8>,
-    ) -> Result<reqwest::Request, ClientError> {
+    ) -> Result<reqwest::blocking::Request, ClientError> {
         let builder = match method {
             RequestMethod::DELETE => match data.is_empty() {
                 false => self.http.delete(url.as_ref()).body(data),
@@ -110,16 +109,12 @@ impl Client {
     }
 }
 
-#[async_trait]
-impl RustifyClient for Client {
+impl ClientBlocking for Client {
     fn base(&self) -> &str {
         self.base.as_str()
     }
 
-    async fn send(
-        &self,
-        req: crate::client::Request,
-    ) -> Result<crate::client::Response, ClientError> {
+    fn send(&self, req: crate::client::Request) -> Result<crate::client::Response, ClientError> {
         let request =
             self.build_request(&req.method, &req.url, &req.query, &req.headers, req.body)?;
 
@@ -128,7 +123,6 @@ impl RustifyClient for Client {
         let response = self
             .http
             .execute(request)
-            .await
             .map_err(|e| ClientError::RequestError {
                 source: Box::new(e),
                 url: err_url.to_string(),
@@ -139,7 +133,6 @@ impl RustifyClient for Client {
         let status_code = response.status().as_u16();
         let body = response
             .bytes()
-            .await
             .map_err(|e| ClientError::ResponseError {
                 source: Box::new(e),
             })?
