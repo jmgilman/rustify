@@ -17,7 +17,7 @@ pub enum ClientError {
     RequestError {
         source: Box<dyn StdError>,
         url: String,
-        method: RequestMethod,
+        method: String,
     },
     #[error("Error building HTTP request")]
     RequestBuildError {
@@ -38,11 +38,9 @@ pub enum ClientError {
         content: Option<String>,
     },
     #[error("Server returned error")]
-    ServerResponseError {
-        url: String,
-        code: u16,
-        content: Option<String>,
-    },
+    ServerResponseError { code: u16, content: Option<String> },
+    #[error("Error serializing URL query parameters")]
+    UrlQueryParseError { source: Box<dyn StdError> },
     #[error("Error parsing URL")]
     UrlParseError { source: ParseError, url: String },
 }

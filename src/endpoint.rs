@@ -1,9 +1,13 @@
 use crate::{
-    client::{Client, Request, Response},
+    client::Client,
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
 use async_trait::async_trait;
+use bytes::Bytes;
+use http::Request as HttpRequest;
+use http::Response as HttpResponse;
+use http::Uri;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use url::Url;
@@ -110,9 +114,15 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     async fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_request(self, client.base(), self.data())?;
+        let req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
         let resp = client.execute(req).await?;
-        parse(self, &resp.body)
+        parse(self, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -124,12 +134,18 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Option<Self::Result>, ClientError> {
         log::info!("Executing endpoint");
 
-        let mut req = build_request(self, client.base(), self.data())?;
+        let mut req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req).await?;
         middle.response(self, &mut resp)?;
-        parse(self, &resp.body)
+        parse(self, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
@@ -141,9 +157,15 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let req = build_request(self, client.base(), self.data())?;
+        let req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
         let resp = client.execute(req).await?;
-        parse(self, &resp.body)
+        parse(self, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -156,23 +178,35 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let mut req = build_request(self, client.base(), self.data())?;
+        let mut req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req).await?;
         middle.response(self, &mut resp)?;
-        parse(self, &resp.body)
+        parse(self, resp.body())
     }
 
     /// Executes the Endpoint using the given [Client], returning the raw
     /// response as a byte array.
-    async fn exec_raw<C: Client>(&self, client: &C) -> Result<Vec<u8>, ClientError> {
+    async fn exec_raw<C: Client>(&self, client: &C) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_request(self, client.base(), self.data())?;
+        let req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
 
         let resp = client.execute(req).await?;
-        Ok(resp.body)
+        Ok(resp.body().clone())
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
@@ -181,24 +215,38 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
         &self,
         client: &C,
         middle: &M,
-    ) -> Result<Vec<u8>, ClientError> {
+    ) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let mut req = build_request(self, client.base(), self.data())?;
+        let mut req = build_request(
+            client.base(),
+            self.path().as_str(),
+            self.method(),
+            self.query(),
+            build_body(self, Self::REQUEST_BODY_TYPE, self.data())?,
+        )?;
         middle.request(self, &mut req)?;
 
         let mut resp = client.execute(req).await?;
         middle.response(self, &mut resp)?;
-        Ok(resp.body)
+        Ok(resp.body().clone())
     }
 }
 pub trait MiddleWare: Sync + Send {
-    fn request<E: Endpoint>(&self, endpoint: &E, req: &mut Request) -> Result<(), ClientError>;
-    fn response<E: Endpoint>(&self, endpoint: &E, resp: &mut Response) -> Result<(), ClientError>;
+    fn request<E: Endpoint>(
+        &self,
+        endpoint: &E,
+        req: &mut HttpRequest<Vec<u8>>,
+    ) -> Result<(), ClientError>;
+    fn response<E: Endpoint>(
+        &self,
+        endpoint: &E,
+        resp: &mut HttpResponse<Bytes>,
+    ) -> Result<(), ClientError>;
 }
 
 /// Builds a [Request] using the given [Endpoint] and base URL
-fn build_request<E: Endpoint>(
+/* fn build_request<E: Endpoint>(
     endpoint: &E,
     base: &str,
     data: Option<&[u8]>,
@@ -232,25 +280,81 @@ fn build_request<E: Endpoint>(
         headers,
         body,
     })
+} */
+
+pub fn build_body<S: Serialize>(
+    object: &S,
+    ty: RequestType,
+    data: Option<&[u8]>,
+) -> Result<Vec<u8>, ClientError> {
+    match data {
+        Some(d) => Ok(d.to_vec()),
+        None => match ty {
+            RequestType::JSON => {
+                let parse_data =
+                    serde_json::to_string(object).map_err(|e| ClientError::DataParseError {
+                        source: Box::new(e),
+                    })?;
+                Ok(match parse_data.as_str() {
+                    "null" => "".to_string(),
+                    "{}" => "".to_string(),
+                    _ => parse_data,
+                }
+                .into_bytes())
+            }
+        },
+    }
+}
+
+/// Builds a [Request] using the given [Endpoint] and base URL
+pub fn build_request(
+    base: &str,
+    path: &str,
+    method: RequestMethod,
+    query: Vec<(String, Value)>,
+    data: Vec<u8>,
+) -> Result<HttpRequest<Vec<u8>>, ClientError> {
+    let uri = build_url(base, path, query)?;
+
+    let method_err = method.clone();
+    let uri_err = uri.to_string();
+    HttpRequest::builder()
+        .uri(uri)
+        .method(method)
+        .body(data)
+        .map_err(|e| ClientError::RequestBuildError {
+            source: Box::new(e),
+            method: method_err,
+            url: uri_err,
+        })
 }
 
 /// Combines the given base URL with the relative URL path from this
 /// Endpoint to create a fully qualified URL.
-fn build_url<E: Endpoint>(endpoint: &E, base: &str) -> Result<url::Url, ClientError> {
+fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<Uri, ClientError> {
     log::info!(
         "Building endpoint url from {} base URL and {} action",
         base,
-        endpoint.path()
+        path,
     );
 
     let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError {
         url: base.to_string(),
         source: e,
     })?;
-    url.path_segments_mut()
-        .unwrap()
-        .extend(endpoint.path().split('/'));
-    Ok(url)
+    url.path_segments_mut().unwrap().extend(path.split('/'));
+
+    {
+        let mut pairs = url.query_pairs_mut();
+        let serializer = serde_urlencoded::Serializer::new(&mut pairs);
+        query
+            .serialize(serializer)
+            .map_err(|e| ClientError::UrlQueryParseError {
+                source: Box::new(e),
+            })?;
+    }
+
+    Ok(url.to_string().parse::<Uri>().unwrap())
 }
 
 /// Parses a response body into the [Endpoint::Result], choosing a deserializer

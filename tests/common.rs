@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use httpmock::prelude::*;
 use rustify::{
     blocking::clients::reqwest::Client as ReqwestBlocking,
@@ -74,24 +75,25 @@ impl MiddleWare for Middle {
     fn request<E: Endpoint>(
         &self,
         _: &E,
-        req: &mut rustify::client::Request,
+        req: &mut http::Request<Vec<u8>>,
     ) -> Result<(), ClientError> {
-        req.headers
-            .push(("X-API-Token".to_string(), "mytoken".to_string()));
+        req.headers_mut()
+            .append("X-API-Token", http::HeaderValue::from_static("mytoken"));
         Ok(())
     }
     fn response<E: Endpoint>(
         &self,
         _: &E,
-        resp: &mut rustify::client::Response,
+        resp: &mut http::Response<Bytes>,
     ) -> Result<(), ClientError> {
-        let err_body = resp.body.clone();
+        let resp_body = resp.body().clone();
         let wrapper: TestWrapper =
-            serde_json::from_slice(&resp.body).map_err(|e| ClientError::ResponseParseError {
+            serde_json::from_slice(&resp_body).map_err(|e| ClientError::ResponseParseError {
                 source: Box::new(e),
-                content: String::from_utf8(err_body).ok(),
+                content: String::from_utf8(resp_body.to_vec()).ok(),
             })?;
-        resp.body = wrapper.result.to_string().as_bytes().to_vec();
+        let data = wrapper.result.to_string();
+        *resp.body_mut() = bytes::Bytes::from(data);
         Ok(())
     }
 }

@@ -1,12 +1,9 @@
-use crate::{client::Client as RustifyClient, enums::RequestMethod, errors::ClientError};
+use crate::{client::Client as RustifyClient, errors::ClientError};
 use async_trait::async_trait;
-use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
-    Method,
-};
-use serde_json::Value;
-use std::str::FromStr;
-use url::Url;
+use bytes::Bytes;
+use http::Request as HttpRequest;
+use http::Response as HttpResponse;
+use std::convert::TryFrom;
 
 /// A client based on the
 /// [reqwest::blocking::Client][1] which can be used for executing
@@ -57,57 +54,6 @@ impl Client {
             http: reqwest::Client::default(),
         }
     }
-
-    fn build_request(
-        &self,
-        method: &RequestMethod,
-        url: &Url,
-        query: &[(String, Value)],
-        headers: &[(String, String)],
-        data: Vec<u8>,
-    ) -> Result<reqwest::Request, ClientError> {
-        let builder = match method {
-            RequestMethod::DELETE => match data.is_empty() {
-                false => self.http.delete(url.as_ref()).body(data),
-                true => self.http.delete(url.as_ref()),
-            },
-            RequestMethod::GET => self.http.get(url.as_ref()),
-            RequestMethod::HEAD => match data.is_empty() {
-                false => self.http.head(url.as_ref()).body(data),
-                true => self.http.head(url.as_ref()),
-            },
-            RequestMethod::LIST => match data.is_empty() {
-                false => self
-                    .http
-                    .request(Method::from_str("LIST").unwrap(), url.as_ref())
-                    .body(data),
-                true => self
-                    .http
-                    .request(Method::from_str("LIST").unwrap(), url.as_ref()),
-            },
-            RequestMethod::POST => match data.is_empty() {
-                false => self.http.post(url.as_ref()).body(data),
-                true => self.http.post(url.as_ref()),
-            },
-        };
-
-        let mut map = HeaderMap::new();
-        headers.iter().for_each(|h| {
-            map.insert(
-                HeaderName::from_str(h.0.as_str()).unwrap(),
-                HeaderValue::from_str(h.1.as_str()).unwrap(),
-            );
-        });
-
-        let req = builder.query(query).headers(map).build().map_err(|e| {
-            ClientError::RequestBuildError {
-                source: Box::new(e),
-                url: url.to_string(),
-                method: method.clone(),
-            }
-        })?;
-        Ok(req)
-    }
 }
 
 #[async_trait]
@@ -116,38 +62,36 @@ impl RustifyClient for Client {
         self.base.as_str()
     }
 
-    async fn send(
-        &self,
-        req: crate::client::Request,
-    ) -> Result<crate::client::Response, ClientError> {
-        let request =
-            self.build_request(&req.method, &req.url, &req.query, &req.headers, req.body)?;
+    async fn send(&self, req: HttpRequest<Vec<u8>>) -> Result<HttpResponse<Bytes>, ClientError> {
+        let request = reqwest::Request::try_from(req).unwrap();
 
-        let err_url = req.url;
-        let err_method = req.method;
+        let url_err = request.url().to_string();
+        let method_err = request.method().to_string();
         let response = self
             .http
             .execute(request)
             .await
             .map_err(|e| ClientError::RequestError {
                 source: Box::new(e),
-                url: err_url.to_string(),
-                method: err_method,
+                url: url_err,
+                method: method_err,
             })?;
 
-        let url = response.url().clone();
         let status_code = response.status().as_u16();
-        let body = response
-            .bytes()
-            .await
-            .map_err(|e| ClientError::ResponseError {
-                source: Box::new(e),
-            })?
-            .to_vec();
-        Ok(crate::client::Response {
-            url,
-            code: status_code,
-            body,
-        })
+        let mut headers = http::header::HeaderMap::new();
+        let http_resp = http::Response::builder().status(status_code);
+        for v in response.headers().into_iter() {
+            headers.append::<http::header::HeaderName>(v.0.into(), v.1.into());
+        }
+        Ok(http_resp
+            .body(
+                response
+                    .bytes()
+                    .await
+                    .map_err(|e| ClientError::ResponseError {
+                        source: Box::new(e),
+                    })?,
+            )
+            .unwrap())
     }
 }
