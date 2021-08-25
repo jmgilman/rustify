@@ -221,7 +221,8 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    #[cfg(feature = "blocking, wrapper")]
+    #[cfg(feature = "blocking")]
+    #[cfg(feature = "wrapper")]
     fn exec_wrap_block<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
@@ -236,7 +237,9 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    #[cfg(feature = "blocking, wrapper")]
+    #[cfg(feature = "blocking")]
+    #[cfg(feature = "wrapper")]
+    #[cfg(feature = "middleware")]
     fn exec_wrap_mut_block<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
