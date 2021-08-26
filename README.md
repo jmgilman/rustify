@@ -61,8 +61,8 @@ You can find example usage in the [examples](examples) directory. They can
 be run with cargo:
 
 ```
-cargo run --package rustify --example reqres1"
-cargo run --package rustify --example reqres2"
+cargo run --package rustify --example reqres1
+cargo run --package rustify --example reqres2
 ```
 
 Additionally, the [vaultrs](https://github.com/jmgilman/vaultrs) is a great
