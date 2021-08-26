@@ -232,7 +232,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 
     let path = params.path;
     let method = params.method;
-    let result = params.result;
+    let response = params.response;
     let request_type = params.request_type;
     let response_type = params.response_type;
     let id = &s.ast().ident;
@@ -274,7 +274,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
             use ::serde_json::Value;
 
             impl #impl_generics Endpoint for #id #ty_generics #where_clause {
-                type Result = #result;
+                type Response = #response;
                 const REQUEST_BODY_TYPE: RequestType = RequestType::#request_type;
                 const RESPONSE_BODY_TYPE: ResponseType = ResponseType::#response_type;
 

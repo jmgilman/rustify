@@ -17,9 +17,9 @@ use serde_json::Value;
 /// Some APIs use a generic wrapper when returning responses that contains
 /// information about the response and the actual response data in a subfield.
 /// This trait allows implementing a generic wrapper which can be used with
-/// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Result] in the
+/// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Response] in the
 /// wrapper. The only requirement is that the [Wrapper::Value] must enclose
-/// the [Endpoint::Result].
+/// the [Endpoint::Response].
 pub trait Wrapper: DeserializeOwned {
     type Value;
 }
@@ -83,7 +83,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     /// The type that the raw response from executing this endpoint will
     /// automatically be deserialized to. This type must implement
     /// [serde::Deserialize].
-    type Result: DeserializeOwned;
+    type Response: DeserializeOwned;
 
     /// The content type of the request body
     const REQUEST_BODY_TYPE: RequestType;
@@ -112,8 +112,8 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Result].
-    async fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Result>, ClientError> {
+    /// deserialized [Endpoint::Response].
+    async fn exec<C: Client>(&self, client: &C) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build(client.base(), self)?;
@@ -122,12 +122,12 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized response as defined by [Endpoint::Result].
+    /// returning the deserialized response as defined by [Endpoint::Response].
     async fn exec_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
         middle: &M,
-    ) -> Result<Option<Self::Result>, ClientError> {
+    ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build_mut(client.base(), self, middle)?;
@@ -136,11 +136,11 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    /// deserialized [Endpoint::Response] wrapped in a [Wrapper].
     async fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: Client,
-        W: Wrapper<Value = Self::Result>,
+        W: Wrapper<Value = Self::Response>,
     {
         log::info!("Executing endpoint");
 
@@ -150,12 +150,12 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    /// returning the deserialized [Endpoint::Response] wrapped in a [Wrapper].
     async fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: Client,
         M: MiddleWare,
-        W: Wrapper<Value = Self::Result>,
+        W: Wrapper<Value = Self::Response>,
     {
         log::info!("Executing endpoint");
 
@@ -189,12 +189,12 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Result].
+    /// deserialized [Endpoint::Response].
     #[cfg(feature = "blocking")]
     fn exec_block<C: BlockingClient>(
         &self,
         client: &C,
-    ) -> Result<Option<Self::Result>, ClientError> {
+    ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build(client.base(), self)?;
@@ -203,13 +203,13 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized response as defined by [Endpoint::Result].
+    /// returning the deserialized response as defined by [Endpoint::Response].
     #[cfg(feature = "blocking")]
     fn exec_mut_block<C: BlockingClient, M: MiddleWare>(
         &self,
         client: &C,
         middle: &M,
-    ) -> Result<Option<Self::Result>, ClientError> {
+    ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = build_mut(client.base(), self, middle)?;
@@ -218,12 +218,12 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    /// deserialized [Endpoint::Response] wrapped in a [Wrapper].
     #[cfg(feature = "blocking")]
     fn exec_wrap_block<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
-        W: Wrapper<Value = Self::Result>,
+        W: Wrapper<Value = Self::Response>,
     {
         log::info!("Executing endpoint");
 
@@ -233,13 +233,13 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
+    /// returning the deserialized [Endpoint::Response] wrapped in a [Wrapper].
     #[cfg(feature = "blocking")]
     fn exec_wrap_mut_block<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
         M: MiddleWare,
-        W: Wrapper<Value = Self::Result>,
+        W: Wrapper<Value = Self::Response>,
     {
         log::info!("Executing endpoint");
 

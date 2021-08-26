@@ -9,7 +9,7 @@ use syn::{Expr, Ident, LitStr, Type};
 pub struct ParametersBuilder {
     pub path: Option<LitStr>,
     pub method: Option<Expr>,
-    pub result: Option<Type>,
+    pub response: Option<Type>,
     pub request_type: Option<Expr>,
     pub response_type: Option<Expr>,
     pub builder: Option<bool>,
@@ -20,7 +20,7 @@ pub struct ParametersBuilder {
 pub struct Parameters {
     pub path: LitStr,
     pub method: Expr,
-    pub result: Type,
+    pub response: Type,
     pub request_type: Expr,
     pub response_type: Expr,
     pub builder: bool,
@@ -41,8 +41,8 @@ impl Parameters {
                 "method" => {
                     builder.method = Some(parse(&map[key])?);
                 }
-                "result" => {
-                    builder.result = Some(parse(&map[key])?);
+                "response" => {
+                    builder.response = Some(parse(&map[key])?);
                 }
                 "request_type" => {
                     builder.request_type = Some(parse(&map[key])?);
@@ -72,8 +72,8 @@ impl Parameters {
             method: builder
                 .method
                 .unwrap_or_else(|| syn::parse_str("GET").unwrap()),
-            result: builder
-                .result
+            response: builder
+                .response
                 .unwrap_or_else(|| syn::parse_str("()").unwrap()),
             request_type: builder
                 .request_type

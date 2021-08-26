@@ -88,7 +88,7 @@ pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<
         .map_err(|e| ClientError::UrlBuildError { source: e })
 }
 
-/// Parses a response body into the [Endpoint::Result], choosing a deserializer
+/// Parses a response body into the [Endpoint::Response], choosing a deserializer
 /// based on [Endpoint::RESPONSE_BODY_TYPE].
 pub fn parse<T: DeserializeOwned>(ty: ResponseType, body: &[u8]) -> Result<Option<T>, ClientError> {
     if body.is_empty() {

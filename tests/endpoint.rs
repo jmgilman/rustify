@@ -158,7 +158,7 @@ async fn test_raw_data() {
 #[tokio::test]
 async fn test_result() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", result = "TestResponse")]
+    #[endpoint(path = "test/path", response = "TestResponse")]
     struct Test {}
 
     #[derive(Deserialize)]
@@ -207,7 +207,7 @@ async fn test_builder() {
 #[tokio::test]
 async fn test_mutate() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", result = "TestResponse")]
+    #[endpoint(path = "test/path", response = "TestResponse")]
     struct Test {}
 
     let t = TestServer::default();
@@ -228,7 +228,7 @@ async fn test_mutate() {
 #[tokio::test]
 async fn test_wrapper() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", result = "TestResponse")]
+    #[endpoint(path = "test/path", response = "TestResponse")]
     struct Test {}
 
     fn strip<T>(wrapper: TestGenericWrapper<T>) -> T {
@@ -250,7 +250,7 @@ async fn test_wrapper() {
 #[tokio::test]
 async fn test_raw_response() {
     #[derive(Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path", result = "TestResponse")]
+    #[endpoint(path = "test/path", response = "TestResponse")]
     struct Test {}
     let resp_data = json!({"result": {"age": 30}});
 
@@ -271,7 +271,7 @@ async fn test_raw_response() {
 async fn test_generic() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Endpoint, Serialize)]
-    #[endpoint(path = "test/path/{self.name}", result = "TestResponse<T>")]
+    #[endpoint(path = "test/path/{self.name}", response = "TestResponse<T>")]
     #[builder(setter(into, strip_option))]
     struct Test<T: DeserializeOwned + Serialize + Debug + Send + Sync> {
         #[serde(skip)]
@@ -321,7 +321,7 @@ async fn test_complex() {
     #[endpoint(
         path = "test/path/{self.name}",
         method = "POST",
-        result = "TestResponse",
+        response = "TestResponse",
         builder = "true"
     )]
     #[builder(setter(into, strip_option), default)]

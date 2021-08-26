@@ -29,7 +29,7 @@ use serde_with::skip_serializing_none;
 #[endpoint(
     path = "users",
     method = "POST",
-    result = "CreateUserResponse",
+    response = "CreateUserResponse",
     builder = "true"
 )]
 #[builder(setter(into, strip_option), default)]

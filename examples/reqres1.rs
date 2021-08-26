@@ -24,7 +24,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 // * request_type: defaults to JSON
 // * response_type: defaults to JSON
 #[derive(Builder, Endpoint, Serialize)]
-#[endpoint(path = "/api/users", result = "Vec<User>", builder = "true")]
+#[endpoint(path = "/api/users", response = "Vec<User>", builder = "true")]
 struct ListUsersRequest {
     // Tagging this field with #[endpoint(query)] informs rustify that this
     // field should be appended as a query parameter to the request URL.
@@ -40,7 +40,7 @@ struct ListUsersRequest {
 // Below we define the details of the wrapper that appears around paginated
 // responses. The form of the resulting data field is specified with a generic
 // and will be supplied when we call the endpoint. Endpoints have a special
-// `exec_wrap()` method which will automatically wrap the result from the
+// `exec_wrap()` method which will automatically wrap the response from the
 // endpoint in the given wrapper.
 #[derive(Debug, Deserialize)]
 pub struct PaginationWrapper<T> {
@@ -61,7 +61,7 @@ impl<T: DeserializeOwned> Wrapper for PaginationWrapper<T> {
 
 // Our endpoint returns a JSON array of objects which each contain information
 // about a user. We represent this by creating a `User` struct and then using
-// `Vec<User>` in the `result` parameter of the endpoint to inform rustify on
+// `Vec<User>` in the `response` parameter of the endpoint to inform rustify on
 // how it should deserialize the response. We don't need to worry about the
 // wrapper because it's handled for us!
 #[derive(Debug, Deserialize)]
@@ -89,14 +89,14 @@ async fn main() {
 
     // Here is where the magic of rustify happens. We call `exec_wrap()` which
     // takes two arguments: an instance of a `Client` and a generic type
-    // parameter which specifies what the result should be wrapped in. Behind
+    // parameter which specifies what the response should be wrapped in. Behind
     // the scenes rustify will initiate a connection to the API server and send
     // a HTTP request as defined by the endpoint. In this case, it sends a GET
     // request to https://reqres.in/api/users?page=1 and automatically
     // deserializes the response into a PaginationWrapper<ListUsersResponse>.
     //
-    // The result type is wrapped in Option<> since it's possible for the API
-    // to return an empty result.
+    // The response type is wrapped in Option<> since it's possible for the API
+    // to return an empty response.
     let result: Result<Option<PaginationWrapper<_>>, _> = endpoint.exec_wrap(&client).await;
 
     // Executing an endpoint can fail for a number of reasons: there was a
