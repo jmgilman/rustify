@@ -20,8 +20,7 @@
 //! GET request to `http://api.com/test/path` and expect an empty response:
 //!
 //! ```should_panic
-//! use rustify::clients::reqwest::Client;
-//! use rustify::endpoint::Endpoint;
+//! use rustify::{Client, Endpoint};
 //! use rustify_derive::Endpoint;
 //! use serde::Serialize;
 //!
@@ -74,3 +73,12 @@ pub mod endpoint;
 pub mod enums;
 pub mod errors;
 pub mod http;
+
+pub use crate::clients::reqwest::Client;
+pub use crate::endpoint::Endpoint;
+
+#[cfg(feature = "middleware")]
+pub use crate::endpoint::MiddleWare;
+
+#[cfg(feature = "wrapper")]
+pub use crate::endpoint::Wrapper;

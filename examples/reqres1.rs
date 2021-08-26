@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use derive_builder::Builder;
-use rustify::clients::reqwest::Client;
-use rustify::endpoint::{Endpoint, Wrapper};
+use rustify::{Client, Endpoint, Wrapper};
 use rustify_derive::Endpoint;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

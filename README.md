@@ -40,8 +40,7 @@ The below example creates a `Test` endpoint that, when executed, will send a GET
 request to `http://api.com/test/path` and expect an empty response:
 
 ```rust
-use rustify::clients::reqwest::Client;
-use rustify::endpoint::Endpoint;
+use rustify::{Client, Endpoint};
 use rustify_derive::Endpoint;
 use serde::Serialize;
 

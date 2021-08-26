@@ -2,9 +2,8 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use derive_builder::Builder;
-use rustify::clients::reqwest::Client;
-use rustify::endpoint::{Endpoint, MiddleWare};
 use rustify::errors::ClientError;
+use rustify::{Client, Endpoint, MiddleWare};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
