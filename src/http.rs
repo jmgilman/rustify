@@ -15,8 +15,8 @@ use url::Url;
 /// If `data` is not None, the contents of data will be returned. Otherwise,
 /// the `object` will be attempted to be serialized to a byte array using the
 /// given [RequestType].
-pub fn build_body<S: Serialize>(
-    object: &S,
+pub fn build_body(
+    object: &impl Serialize,
     ty: RequestType,
     data: Option<Bytes>,
 ) -> Result<Bytes, ClientError> {

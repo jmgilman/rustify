@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2021-08-26
+
+### Added
+- Adds `Endpoint`, `Client`, `MiddleWare`, and `Wrapper` to crate root
+
+### Changed
+- Removes feature flags for middleware and wrapping
+- Various improvements and fixes to documentation
+- Changes `Endpoint::Result` to `Endpoint::Response`
+
 ## [0.4.0] - 2021-08-25
 
 ### Added
@@ -75,7 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/jmgilman/rustify/releases/tag/v0.4.1
 [0.4.0]: https://github.com/jmgilman/rustify/releases/tag/v0.4.0
 [0.3.1]: https://github.com/jmgilman/rustify/releases/tag/v0.3.1
 [0.3.0]: https://github.com/jmgilman/rustify/releases/tag/v0.3.0
