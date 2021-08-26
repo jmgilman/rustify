@@ -14,7 +14,7 @@
 
 > A Rust library for interacting with HTTP API endpoints
 
-Rustify is a small library writtein in Rust which eases the burden of
+Rustify is a small library written in Rust which eases the burden of
 scaffolding HTTP APIs. It provides an `Endpoint` trait along with a macro helper
 which allows templating various remote endpoints. Both asynchronous and
 synchrounous clients are offered for executing requests against endpoints with
