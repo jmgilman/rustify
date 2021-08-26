@@ -38,4 +38,13 @@ httpmock = "0.6.2"
 serde_with = "1.9.4"
 test-env-log = "0.2.7"
 tokio = "1.10.0"
+tokio-test = "0.4.2"
 trybuild = "1.0.45"
+
+[[example]]
+name = "reqres1"
+required-features = ["wrapper"]
+
+[[example]]
+name = "reqres2"
+required-features = ["middleware"]
