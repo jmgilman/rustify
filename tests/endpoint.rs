@@ -3,20 +3,15 @@ mod common;
 use std::fmt::Debug;
 
 use bytes::Bytes;
-#[cfg(feature = "wrapper")]
-use common::TestGenericWrapper;
-use common::{TestResponse, TestServer};
+use common::{Middle, TestGenericWrapper, TestResponse, TestServer};
 use derive_builder::Builder;
 use httpmock::prelude::*;
-use rustify::endpoint::Endpoint;
+use rustify::{endpoint::Endpoint, errors::ClientError};
 use rustify_derive::Endpoint;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-#[cfg(feature = "middleware")]
-use {
-    common::Middle, rustify::errors::ClientError, serde::de::DeserializeOwned,
-    serde_with::skip_serializing_none, std::marker::PhantomData,
-};
+use serde_with::skip_serializing_none;
+use std::marker::PhantomData;
 
 #[tokio::test]
 async fn test_path() {
@@ -210,7 +205,6 @@ async fn test_builder() {
 }
 
 #[tokio::test]
-#[cfg(feature = "middleware")]
 async fn test_mutate() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
@@ -232,7 +226,6 @@ async fn test_mutate() {
 }
 
 #[tokio::test]
-#[cfg(feature = "wrapper")]
 async fn test_wrapper() {
     #[derive(Debug, Endpoint, Serialize)]
     #[endpoint(path = "test/path", result = "TestResponse")]
@@ -275,7 +268,6 @@ async fn test_raw_response() {
 }
 
 #[tokio::test]
-#[cfg(feature = "middleware")]
 async fn test_generic() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Endpoint, Serialize)]
@@ -323,7 +315,6 @@ async fn test_generic() {
 }
 
 #[tokio::test]
-#[cfg(feature = "middleware")]
 async fn test_complex() {
     #[skip_serializing_none]
     #[derive(Builder, Debug, Default, Endpoint, Serialize)]

@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use derive_builder::Builder;
 use rustify::{Client, Endpoint, Wrapper};
 use rustify_derive::Endpoint;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 // Endpoints must derive `serde::Serialize` as rustify uses the fields of the
 // endpoint struct to form the contents of the request body. If the struct

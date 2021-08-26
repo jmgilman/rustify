@@ -2,8 +2,7 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use derive_builder::Builder;
-use rustify::errors::ClientError;
-use rustify::{Client, Endpoint, MiddleWare};
+use rustify::{errors::ClientError, Client, Endpoint, MiddleWare};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -42,9 +41,10 @@ struct CreateUserRequest {
 
 // The API returns an ID and timestamp.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateUserResponse {
     pub id: String,
-    pub createdAt: String,
+    pub created_at: String,
 }
 
 // Rustify allows passing Middleware when executing an endpoint. Implementations
@@ -104,6 +104,6 @@ async fn main() {
         .unwrap();
     println!(
         "Created user {} with ID {} at {}",
-        endpoint.name, result.id, result.createdAt
+        endpoint.name, result.id, result.created_at
     );
 }

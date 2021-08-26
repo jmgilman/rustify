@@ -1,7 +1,6 @@
 //! Contains the blocking [Client] trait for executing
 //! [Endpoints][crate::endpoint::Endpoint].
-use crate::client::HTTP_SUCCESS_CODES;
-use crate::errors::ClientError;
+use crate::{client::HTTP_SUCCESS_CODES, errors::ClientError};
 use bytes::Bytes;
 use http::{Request, Response};
 

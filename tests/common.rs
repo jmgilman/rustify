@@ -1,19 +1,14 @@
+use bytes::Bytes;
 use httpmock::prelude::*;
 #[cfg(feature = "blocking")]
 use rustify::blocking::clients::reqwest::Client as ReqwestBlocking;
-use rustify::clients::reqwest::Client as Reqwest;
-use serde::Deserialize;
-use serde_json::Value;
-#[cfg(feature = "middleware")]
-use {
-    bytes::Bytes,
-    rustify::{
-        endpoint::{Endpoint, MiddleWare},
-        errors::ClientError,
-    },
+use rustify::{
+    clients::reqwest::Client as Reqwest,
+    endpoint::{Endpoint, MiddleWare, Wrapper},
+    errors::ClientError,
 };
-#[cfg(feature = "wrapper")]
-use {rustify::endpoint::Wrapper, serde::de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize};
+use serde_json::Value;
 
 pub struct TestServer {
     pub server: MockServer,
@@ -74,15 +69,12 @@ pub struct TestGenericWrapper<T> {
     pub result: T,
 }
 
-#[cfg(feature = "wrapper")]
 impl<T: DeserializeOwned> Wrapper for TestGenericWrapper<T> {
     type Value = T;
 }
 
-#[cfg(feature = "middleware")]
 pub struct Middle {}
 
-#[cfg(feature = "middleware")]
 impl MiddleWare for Middle {
     fn request<E: Endpoint>(
         &self,

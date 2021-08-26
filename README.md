@@ -61,8 +61,8 @@ You can find example usage in the [examples](examples) directory. They can
 be run with cargo:
 
 ```
-cargo run --package rustify --example reqres1 --features="wrapper"
-cargo run --package rustify --example reqres2 --features="middleware"
+cargo run --package rustify --example reqres1"
+cargo run --package rustify --example reqres2"
 ```
 
 Additionally, the [vaultrs](https://github.com/jmgilman/vaultrs) is a great
@@ -73,10 +73,6 @@ The following features are available for this crate:
 
 * `blocking`: Enables the blocking variants of `Client`s as well as the blocking
    `exec()` functions in `Endpoint`s. 
-* `middleware`: Enables using `MiddleWare` for modifying requests/responses
-  during `Endpoint` execution.
-* `wrapper`: Enables using a `Wrapper` to wrap responses from `Endpoint`
-  execution.
 
 ## Error Handling
 

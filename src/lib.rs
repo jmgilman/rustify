@@ -43,8 +43,8 @@
 //! be run with cargo:
 //!
 //! ```ignore
-//! cargo run --package rustify --example reqres1 --features="wrapper"
-//! cargo run --package rustify --example reqres2 --features="middleware"
+//! cargo run --package rustify --example reqres1
+//! cargo run --package rustify --example reqres2
 //! ```
 //!
 //! Additionally, the [vaultrs](https://github.com/jmgilman/vaultrs) is a great
@@ -55,10 +55,6 @@
 //!
 //! * `blocking`: Enables the blocking variants of `Client`s as well as the blocking
 //!    `exec()` functions in `Endpoint`s.
-//! * `middleware`: Enables using `MiddleWare` for modifying requests/responses
-//!   during `Endpoint` execution.
-//! * `wrapper`: Enables using a `Wrapper` to wrap responses from `Endpoint`
-//!   execution.
 //!
 //! ## Error Handling
 //!
@@ -74,11 +70,7 @@ pub mod enums;
 pub mod errors;
 pub mod http;
 
-pub use crate::clients::reqwest::Client;
-pub use crate::endpoint::Endpoint;
-
-#[cfg(feature = "middleware")]
-pub use crate::endpoint::MiddleWare;
-
-#[cfg(feature = "wrapper")]
-pub use crate::endpoint::Wrapper;
+pub use crate::{
+    clients::reqwest::Client,
+    endpoint::{Endpoint, MiddleWare, Wrapper},
+};

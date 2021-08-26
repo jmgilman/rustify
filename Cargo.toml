@@ -15,8 +15,6 @@ edition = "2018"
 [features]
 default = ["reqwest"]
 blocking = ["reqwest/blocking"]
-middleware = []
-wrapper = []
 
 [dependencies]
 async-trait = "0.1.51"
@@ -43,8 +41,6 @@ trybuild = "1.0.45"
 
 [[example]]
 name = "reqres1"
-required-features = ["wrapper"]
 
 [[example]]
 name = "reqres2"
-required-features = ["middleware"]

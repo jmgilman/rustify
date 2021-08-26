@@ -20,7 +20,6 @@ use serde_json::Value;
 /// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Result] in the
 /// wrapper. The only requirement is that the [Wrapper::Value] must enclose
 /// the [Endpoint::Result].
-#[cfg(feature = "wrapper")]
 pub trait Wrapper: DeserializeOwned {
     type Value;
 }
@@ -124,7 +123,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized response as defined by [Endpoint::Result].
-    #[cfg(feature = "middleware")]
     async fn exec_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
@@ -139,7 +137,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    #[cfg(feature = "wrapper")]
     async fn exec_wrap<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: Client,
@@ -154,7 +151,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
-    #[cfg(feature = "middleware")]
     async fn exec_wrap_mut<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: Client,
@@ -180,7 +176,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
 
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the raw response as a byte array.
-    #[cfg(feature = "middleware")]
     async fn exec_raw_mut<C: Client, M: MiddleWare>(
         &self,
         client: &C,
@@ -225,7 +220,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Result] wrapped in a [Wrapper].
     #[cfg(feature = "blocking")]
-    #[cfg(feature = "wrapper")]
     fn exec_wrap_block<C, W>(&self, client: &C) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
@@ -241,8 +235,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     /// Executes the Endpoint using the given [Client] and [MiddleWare],
     /// returning the deserialized [Endpoint::Result] wrapped in a [Wrapper].
     #[cfg(feature = "blocking")]
-    #[cfg(feature = "wrapper")]
-    #[cfg(feature = "middleware")]
     fn exec_wrap_mut_block<C, M, W>(&self, client: &C, middle: &M) -> Result<Option<W>, ClientError>
     where
         C: BlockingClient,
@@ -283,7 +275,6 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     }
 }
 
-#[cfg(feature = "middleware")]
 pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(
         &self,
@@ -309,7 +300,6 @@ fn build<E: Endpoint>(base: &str, endpoint: &E) -> Result<Request<Bytes>, Client
 }
 
 /// Builds a [Request] from the base URL path and [Endpoint]
-#[cfg(feature = "middleware")]
 fn build_mut<E: Endpoint, M: MiddleWare>(
     base: &str,
     endpoint: &E,
@@ -331,7 +321,6 @@ async fn exec<C: Client>(client: &C, req: Request<Bytes>) -> Result<Response<Byt
     client.execute(req).await
 }
 
-#[cfg(feature = "middleware")]
 async fn exec_mut<C: Client, E: Endpoint, M: MiddleWare>(
     client: &C,
     endpoint: &E,
