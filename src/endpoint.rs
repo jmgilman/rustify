@@ -1,3 +1,4 @@
+//! Contains the [Endpoint] trait and supporting functions.
 #[cfg(feature = "blocking")]
 use crate::blocking::client::Client as BlockingClient;
 use crate::{
@@ -74,7 +75,9 @@ pub trait Wrapper: DeserializeOwned {
 /// // Execute our Endpoint using the client
 /// // This sends a GET request to http://myapi.com/my/endpoint
 /// // It assumes an empty response
-/// let result = endpoint.exec(&client);
+/// # tokio_test::block_on(async {
+/// let result = endpoint.exec(&client).await;
+/// # })
 /// ```
 #[async_trait]
 pub trait Endpoint: Send + Sync + Serialize + Sized {

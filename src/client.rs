@@ -1,3 +1,5 @@
+//! Contains the [Client] trait for executing
+//! [Endpoints][crate::endpoint::Endpoint].
 use crate::errors::ClientError;
 use async_trait::async_trait;
 use bytes::Bytes;

@@ -1,3 +1,7 @@
+//! Contains an implementation of the blocking
+//! [Client][crate::blocking::client::Client] being backed by the
+//! [reqwest](https://docs.rs/reqwest/) crate.
+
 use crate::{blocking::client::Client as RustifyClient, errors::ClientError};
 use bytes::Bytes;
 use http::{Request, Response};
@@ -6,7 +10,7 @@ use std::convert::TryFrom;
 /// A client based on the
 /// [reqwest::blocking::Client][1] which can be used for executing
 /// [Endpoints][crate::endpoint::Endpoint]. A backing instance of a
-/// [reqwest::blocking::Client][1] is used to increase performance and save
+/// [reqwest::blocking::Client][1] is used to increase performance and to save
 /// certain characteristics across sessions. A base URL is required and is used
 /// to qualify the full path of any [Endpoints][crate::endpoint::Endpoint] which
 /// are executed by this client.
@@ -14,7 +18,7 @@ use std::convert::TryFrom;
 /// # Example
 /// ```
 /// use rustify::blocking::clients::reqwest::Client;
-/// use rustify::endpoint::Endpoint;
+/// use rustify::Endpoint;
 /// use rustify_derive::Endpoint;
 /// use serde::Serialize;
 ///
@@ -34,7 +38,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Creates a new instance of [ReqwestClient] using the provided parameters
+    /// Creates a new instance of [Client] using the provided parameters
     pub fn new(base: &str, http: reqwest::blocking::Client) -> Self {
         Client {
             base: base.to_string(),
@@ -42,7 +46,7 @@ impl Client {
         }
     }
 
-    /// Creates a new instance of [ReqwestClient] with a default instance of
+    /// Creates a new instance of [Client] with a default instance of
     /// [reqwest::blocking::Client][1].
     ///
     /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html

@@ -1,3 +1,5 @@
+//! Contains the blocking [Client] trait for executing
+//! [Endpoints][crate::endpoint::Endpoint].
 use crate::client::HTTP_SUCCESS_CODES;
 use crate::errors::ClientError;
 use bytes::Bytes;

@@ -1,3 +1,6 @@
+//! Contains an implementation of [Client][crate::client::Client] being backed
+//! by the [reqwest](https://docs.rs/reqwest/) crate.
+
 use crate::{client::Client as RustifyClient, errors::ClientError};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -5,17 +8,17 @@ use http::{Request, Response};
 use std::convert::TryFrom;
 
 /// A client based on the
-/// [reqwest::blocking::Client][1] which can be used for executing
+/// [reqwest::Client][1] which can be used for executing
 /// [Endpoints][crate::endpoint::Endpoint]. A backing instance of a
-/// [reqwest::blocking::Client][1] is used to increase performance and save
-/// certain characteristics across sessions. A base URL is required and is used
-/// to qualify the full path of any [Endpoints][crate::endpoint::Endpoint] which
+/// [reqwest::Client][1] is used to increase performance and to save certain
+/// characteristics across sessions. A base URL is required and is used to
+/// qualify the full path of any [Endpoints][crate::endpoint::Endpoint] which
 /// are executed by this client.
 ///
 /// # Example
 /// ```
 /// use rustify::clients::reqwest::Client;
-/// use rustify::endpoint::Endpoint;
+/// use rustify::Endpoint;
 /// use rustify_derive::Endpoint;
 /// use serde::Serialize;
 ///
@@ -23,19 +26,21 @@ use std::convert::TryFrom;
 /// #[endpoint(path = "my/endpoint")]
 /// struct MyEndpoint {}
 ///
+/// # tokio_test::block_on(async {
 /// let client = Client::default("http://myapi.com");
 /// let endpoint = MyEndpoint {};
-/// let result = endpoint.exec(&client);
+/// let result = endpoint.exec(&client).await;
+/// # })
 /// ```
 ///
-/// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html
+/// [1]: https://docs.rs/reqwest/latest/reqwest/struct.Client.html
 pub struct Client {
     pub http: reqwest::Client,
     pub base: String,
 }
 
 impl Client {
-    /// Creates a new instance of [ReqwestClient] using the provided parameters
+    /// Creates a new instance of [Client] using the provided parameters
     pub fn new(base: &str, http: reqwest::Client) -> Self {
         Client {
             base: base.to_string(),
@@ -43,10 +48,10 @@ impl Client {
         }
     }
 
-    /// Creates a new instance of [ReqwestClient] with a default instance of
-    /// [reqwest::blocking::Client][1].
+    /// Creates a new instance of [Client] with a default instance of
+    /// [reqwest::Client][1].
     ///
-    /// [1]: https://docs.rs/reqwest/latest/reqwest/blocking/struct.Client.html
+    /// [1]: https://docs.rs/reqwest/latest/reqwest/struct.Client.html
     pub fn default(base: &str) -> Self {
         Client {
             base: base.to_string(),

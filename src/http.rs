@@ -1,3 +1,5 @@
+//! Contains helper functions for working with HTTP requests and responses.
+
 use crate::{
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,

@@ -1,3 +1,5 @@
+//! Contains the common error enum used across this crate
+
 use std::error::Error as StdError;
 use thiserror::Error;
 

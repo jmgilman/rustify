@@ -1,3 +1,5 @@
+//! Contains common enums used across the crate
+
 /// Represents a HTTP request method
 #[derive(Clone, Debug)]
 pub enum RequestMethod {
@@ -21,11 +23,13 @@ impl Into<http::Method> for RequestMethod {
     }
 }
 
+/// Represents the type of a HTTP request body
 #[derive(Clone, Debug)]
 pub enum RequestType {
     JSON,
 }
 
+/// Represents the type of a HTTP response body
 #[derive(Clone, Debug)]
 pub enum ResponseType {
     JSON,
