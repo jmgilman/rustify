@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2021-09-01
+
+### Changed
+- Changes generic errors to anyhow errors to make them thread safe and more 
+  feature rich
+
 ## [0.4.2] - 2021-08-30
 
 ### Added
@@ -90,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.2...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/jmgilman/rustify/releases/tag/v0.4.3
 [0.4.2]: https://github.com/jmgilman/rustify/releases/tag/v0.4.2
 [0.4.1]: https://github.com/jmgilman/rustify/releases/tag/v0.4.1
 [0.4.0]: https://github.com/jmgilman/rustify/releases/tag/v0.4.0
