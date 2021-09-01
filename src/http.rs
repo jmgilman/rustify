@@ -24,10 +24,8 @@ pub fn build_body(
         Some(d) => Ok(d),
         None => match ty {
             RequestType::JSON => {
-                let parse_data =
-                    serde_json::to_string(object).map_err(|e| ClientError::DataParseError {
-                        source: Box::new(e),
-                    })?;
+                let parse_data = serde_json::to_string(object)
+                    .map_err(|e| ClientError::DataParseError { source: e.into() })?;
                 Ok(Bytes::from(match parse_data.as_str() {
                     "null" => "".to_string(),
                     "{}" => "".to_string(),
@@ -78,9 +76,7 @@ pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<
         let serializer = serde_urlencoded::Serializer::new(&mut pairs);
         query
             .serialize(serializer)
-            .map_err(|e| ClientError::UrlQueryParseError {
-                source: Box::new(e),
-            })?;
+            .map_err(|e| ClientError::UrlQueryParseError { source: e.into() })?;
     }
 
     url.to_string()
@@ -98,7 +94,7 @@ pub fn parse<T: DeserializeOwned>(ty: ResponseType, body: &[u8]) -> Result<Optio
     match ty {
         ResponseType::JSON => {
             serde_json::from_slice(body).map_err(|e| ClientError::ResponseParseError {
-                source: Box::new(e),
+                source: e.into(),
                 content: String::from_utf8(body.to_vec()).ok(),
             })
         }

@@ -1,6 +1,4 @@
 //! Contains the common error enum used across this crate
-
-use std::error::Error as StdError;
 use thiserror::Error;
 
 use crate::enums::RequestMethod;
@@ -9,14 +7,14 @@ use crate::enums::RequestMethod;
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error("Error parsing endpoint into data")]
-    DataParseError { source: Box<dyn StdError> },
+    DataParseError { source: anyhow::Error },
     #[error("Error building endpoint request")]
-    EndpointBuildError { source: Box<dyn StdError> },
+    EndpointBuildError { source: anyhow::Error },
     #[error("An error occurred in processing the request")]
-    GenericError { source: Box<dyn StdError> },
+    GenericError { source: anyhow::Error },
     #[error("Error sending HTTP request")]
     RequestError {
-        source: Box<dyn StdError>,
+        source: anyhow::Error,
         url: String,
         method: String,
     },
@@ -29,15 +27,15 @@ pub enum ClientError {
     #[error("Error building request for Reqwest crate")]
     ReqwestBuildError { source: reqwest::Error },
     #[error("Error retrieving HTTP response")]
-    ResponseError { source: Box<dyn StdError> },
+    ResponseError { source: anyhow::Error },
     #[error("Error parsing server response as UTF-8")]
     ResponseConversionError {
-        source: Box<dyn StdError>,
+        source: anyhow::Error,
         content: Vec<u8>,
     },
     #[error("Error parsing HTTP response")]
     ResponseParseError {
-        source: Box<dyn StdError>,
+        source: anyhow::Error,
         content: Option<String>,
     },
     #[error("Server returned error")]
@@ -45,7 +43,7 @@ pub enum ClientError {
     #[error("Error building URL")]
     UrlBuildError { source: http::uri::InvalidUri },
     #[error("Error serializing URL query parameters")]
-    UrlQueryParseError { source: Box<dyn StdError> },
+    UrlQueryParseError { source: anyhow::Error },
     #[error("Error parsing URL")]
     UrlParseError { source: url::ParseError },
 }

@@ -77,7 +77,7 @@ impl RustifyClient for Client {
             .execute(request)
             .await
             .map_err(|e| ClientError::RequestError {
-                source: Box::new(e),
+                source: e.into(),
                 url: url_err,
                 method: method_err,
             })?;
@@ -93,12 +93,8 @@ impl RustifyClient for Client {
                 response
                     .bytes()
                     .await
-                    .map_err(|e| ClientError::ResponseError {
-                        source: Box::new(e),
-                    })?,
+                    .map_err(|e| ClientError::ResponseError { source: e.into() })?,
             )
-            .map_err(|e| ClientError::ResponseError {
-                source: Box::new(e),
-            })
+            .map_err(|e| ClientError::ResponseError { source: e.into() })
     }
 }

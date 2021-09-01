@@ -73,7 +73,7 @@ impl RustifyClient for Client {
             .http
             .execute(request)
             .map_err(|e| ClientError::RequestError {
-                source: Box::new(e),
+                source: e.into(),
                 url: url_err,
                 method: method_err,
             })?;
@@ -85,11 +85,11 @@ impl RustifyClient for Client {
             headers.append::<http::header::HeaderName>(v.0.into(), v.1.into());
         }
         http_resp
-            .body(response.bytes().map_err(|e| ClientError::ResponseError {
-                source: Box::new(e),
-            })?)
-            .map_err(|e| ClientError::ResponseError {
-                source: Box::new(e),
-            })
+            .body(
+                response
+                    .bytes()
+                    .map_err(|e| ClientError::ResponseError { source: e.into() })?,
+            )
+            .map_err(|e| ClientError::ResponseError { source: e.into() })
     }
 }

@@ -93,7 +93,7 @@ impl MiddleWare for Middle {
         let resp_body = resp.body().clone();
         let wrapper: TestWrapper =
             serde_json::from_slice(&resp_body).map_err(|e| ClientError::ResponseParseError {
-                source: Box::new(e),
+                source: e.into(),
                 content: String::from_utf8(resp_body.to_vec()).ok(),
             })?;
         let data = wrapper.result.to_string();

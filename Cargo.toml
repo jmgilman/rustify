@@ -17,6 +17,7 @@ default = ["reqwest"]
 blocking = ["reqwest/blocking"]
 
 [dependencies]
+anyhow = "1.0.43"
 async-trait = "0.1.51"
 bytes = "1.0.1"
 http = "0.2.4"
