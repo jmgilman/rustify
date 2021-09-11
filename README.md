@@ -1,8 +1,8 @@
 # rustify
 
 <p align="center">
-    <a href="https://github.com/jmgilman/rustify/actions/workflows/validate.yml">
-        <img src="https://github.com/jmgilman/rustify/actions/workflows/validate.yml/badge.svg"/>
+    <a href="https://github.com/jmgilman/rustify/actions/workflows/ci.yml">
+        <img src="https://github.com/jmgilman/rustify/actions/workflows/ci.yml/badge.svg"/>
     </a>
     <a href="https://crates.io/crates/rustify">
         <img src="https://img.shields.io/crates/v/rustify">

@@ -1,6 +1,6 @@
 on: [push, pull_request]
 
-name: Validate
+name: CI
 
 jobs:
   check:
@@ -68,3 +68,17 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: [test, lints, check]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+      - uses: katyo/publish-crates@v1
+        with:
+            registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
