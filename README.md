@@ -31,7 +31,7 @@ Add rustify as a depdendency to your cargo.toml:
 
 ```toml
 [dependencies]
-rustify = "0.4.0"
+rustify = "0.4.4"
 ```
 
 ## Usage

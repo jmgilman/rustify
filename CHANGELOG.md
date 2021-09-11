@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2021-09-11
+
+### Changed
+- Makes rustls the default TLS handler for reqwest
+
 ## [0.4.3] - 2021-09-01
 
 ### Changed
@@ -96,7 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.3...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.4.3]: https://github.com/jmgilman/rustify/releases/tag/v0.4.3
 [0.4.2]: https://github.com/jmgilman/rustify/releases/tag/v0.4.2
 [0.4.1]: https://github.com/jmgilman/rustify/releases/tag/v0.4.1
