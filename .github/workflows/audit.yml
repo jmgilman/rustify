@@ -10,10 +10,10 @@ on:
       - '**/Cargo.lock'
   schedule:
     - cron: '7 7 7 * *'
-  workflow_dispatch:
 
 jobs:
-  security_audit:
+  audit:
+    name: Security audit
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
