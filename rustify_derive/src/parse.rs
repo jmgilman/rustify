@@ -109,7 +109,7 @@ pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
 ///
 /// This function makes a basic assumption that all attributes will be a list
 /// of [Meta] values. Any other format will cause the function to fail. The
-/// function automatically provides deduplication of paramter values. For
+/// function automatically provides deduplication of parameter values. For
 /// example:
 /// ```
 /// #[endpoint(query, data, data)]

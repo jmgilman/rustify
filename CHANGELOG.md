@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Response errors try to parse content to be UTF-8 encoded strings instead of raw bytes
-- Successul response codes updated to an inclusive range of 200-208
+- Successful response codes updated to an inclusive range of 200-208
 
 ### Fixed
 - The `builder` option can now be used with structs that have generics and lifetimes

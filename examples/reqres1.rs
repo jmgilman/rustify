@@ -53,7 +53,7 @@ pub struct PaginationWrapper<T> {
 }
 
 // This is almost always the form that the implementation will take.
-// Unforunately, Rust does not support associated types having a default
+// Unfortunately, Rust does not support associated types having a default
 // type set to a generic, so we must define it when we use it.
 impl<T: DeserializeOwned> Wrapper for PaginationWrapper<T> {
     type Value = T;

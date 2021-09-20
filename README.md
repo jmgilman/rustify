@@ -27,7 +27,7 @@ middleware and wrapping API responses.
 
 ## Installation
 
-Add rustify as a depdendency to your cargo.toml:
+Add rustify as a dependency to your cargo.toml:
 
 ```toml
 [dependencies]

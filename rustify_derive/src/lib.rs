@@ -158,7 +158,7 @@ fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::Token
 ///
 /// Adds an implementation to the base struct which provides a `builder` method
 /// for returning instances of the Builder variant of the struct. This removes
-/// the need to explicitely import it.
+/// the need to explicitly import it.
 fn gen_builder(id: &Ident, generics: &Generics) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let builder_id: syn::Type =
