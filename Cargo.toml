@@ -16,6 +16,11 @@ edition = "2018"
 default = ["reqwest"]
 blocking = ["reqwest/blocking"]
 
+[workspace]
+members = [
+    "rustify_derive",
+]
+
 [dependencies]
 anyhow = "1.0.43"
 async-trait = "0.1.51"
