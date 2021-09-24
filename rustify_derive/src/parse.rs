@@ -1,8 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+};
 
-use crate::Error;
+use crate::{EndpointAttribute, Error};
 use proc_macro2::Span;
-use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type};
+use syn::{
+    spanned::Spanned, Attribute, Field, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type,
+};
 
 /// Returns all [Meta] values contained in a [Meta::List].
 ///
@@ -12,7 +17,7 @@ use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, Neste
 /// ```
 /// Would return individual [Meta] values for `query` and `data`. This function
 /// fails if the [Meta::List] is empty or contains any literals.
-pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
+pub(crate) fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     if let Meta::List(list) = &attr {
         if list.nested.is_empty() {
@@ -45,7 +50,7 @@ pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
 /// Would return individual [MetaNameValue] values for `path` and `method`. This
 /// function fails if the [Meta::List] is empty, contains literals, or cannot
 /// be parsed as name/value pairs.
-pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
+pub(crate) fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
     let meta_list = attr_list(attr)?;
     let mut result = Vec::<MetaNameValue>::new();
     for meta in meta_list.iter() {
@@ -70,7 +75,7 @@ pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
 /// Would return a [HashMap] mapping individual ID's (i.e. `path` and `method`)
 /// to their [LitStr] values (i.e. "m/path" and "POST"). This function fails if
 /// the values cannot be parsed as string literals.
-pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error> {
+pub(crate) fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error> {
     let mut map = HashMap::<Ident, LitStr>::new();
     for value in values.iter() {
         let id = value.path.get_ident().unwrap().clone();
@@ -88,7 +93,7 @@ pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error>
 }
 
 /// Searches a list of [Attribute]'s and returns any matching [crate::ATTR_NAME].
-pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
+pub(crate) fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     for attr in attrs.iter() {
         let meta = attr.parse_meta().map_err(Error::from)?;
@@ -103,22 +108,15 @@ pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     Ok(result)
 }
 
-/// Parses all [Attribute]'s on the given [syn::Field]'s, searching for any
-/// attributes which match [crate::ATTR_NAME] and creating a map of field names
-/// to attached attribute parameters.
+/// Returns a mapping of endpoint attributes to a list of their fields.
 ///
-/// This function makes a basic assumption that all attributes will be a list
-/// of [Meta] values. Any other format will cause the function to fail. The
-/// function automatically provides deduplication of parameter values. For
-/// example:
-/// ```
-/// #[endpoint(query, data, data)]
-/// #[endpoint(query)]
-/// my_field: String
-/// ```
-/// Would deduplicate into `{my_field: query, data}`.
-pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>>, Error> {
-    let mut result = HashMap::<Ident, HashSet<Meta>>::new();
+/// Parses all [Attribute]'s on the given [syn::Field]'s, searching for any
+/// attributes which match [crate::ATTR_NAME] and creating a map of attributes
+/// to a list of their associated fields.
+pub(crate) fn field_attributes(
+    data: &syn::Data,
+) -> Result<HashMap<EndpointAttribute, Vec<Field>>, Error> {
+    let mut result = HashMap::<EndpointAttribute, Vec<Field>>::new();
     if let syn::Data::Struct(data) = data {
         for field in data.fields.iter() {
             // Collect all `endpoint` attributes attached to this field
@@ -133,8 +131,18 @@ pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>
             // Flatten and eliminate duplicates
             let attrs = attrs.into_iter().flatten().collect::<HashSet<Meta>>();
 
-            // Map field name -> unique attribute parameters
-            result.insert(field.ident.clone().unwrap(), attrs);
+            // Add this field to the list of fields for each attribute
+            for attr in attrs.iter() {
+                let attr_ty = EndpointAttribute::try_from(attr)?;
+                match result.get_mut(&attr_ty) {
+                    Some(r) => {
+                        r.push(field.clone());
+                    }
+                    None => {
+                        result.insert(attr_ty, vec![field.clone()]);
+                    }
+                }
+            }
         }
     }
 
@@ -143,7 +151,7 @@ pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>
 
 /// Parses the fields of a struct and returns a map of field name -> type
 #[allow(dead_code)]
-pub fn field_types(data: &syn::Data) -> Result<HashMap<Ident, Type>, Error> {
+pub(crate) fn field_types(data: &syn::Data) -> Result<HashMap<Ident, Type>, Error> {
     if let syn::Data::Struct(data) = data {
         Ok(data
             .fields

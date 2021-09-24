@@ -12,19 +12,40 @@ mod error;
 mod params;
 mod parse;
 
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, convert::TryFrom};
 
 use error::Error;
 use params::Parameters;
 use proc_macro2::Span;
 use quote::quote;
 use regex::Regex;
-use syn::{self, Generics, Ident, Meta};
+use syn::{self, spanned::Spanned, Field, Generics, Ident, Meta};
 
 const MACRO_NAME: &str = "Endpoint";
 const ATTR_NAME: &str = "endpoint";
-const DATA_NAME: &str = "data";
-const QUERY_NAME: &str = "query";
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub(crate) enum EndpointAttribute {
+    DATA,
+    QUERY,
+}
+
+impl TryFrom<&Meta> for EndpointAttribute {
+    type Error = Error;
+    fn try_from(m: &Meta) -> Result<Self, Self::Error> {
+        match m.path().get_ident() {
+            Some(i) => match i.to_string().to_lowercase().as_str() {
+                "data" => Ok(EndpointAttribute::DATA),
+                "query" => Ok(EndpointAttribute::QUERY),
+                _ => Err(Error::new(
+                    m.span(),
+                    format!("Unknown attribute: {}", i).as_str(),
+                )),
+            },
+            None => Err(Error::new(m.span(), "Invalid attribute")),
+        }
+    }
+}
 
 /// Generates the path string for the endpoint.
 ///
@@ -87,70 +108,51 @@ fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 /// ```
 /// If no fields are marked the method is not generated which allows the trait
 /// method to be used (defaults to empty vec).
-fn gen_query(fields: &HashMap<Ident, HashSet<Meta>>) -> proc_macro2::TokenStream {
-    // Collect all fields that have a query parameter attached
-    let mut query_fields = Vec::<&Ident>::new();
-    for (key, value) in fields.iter() {
-        for attr in value.iter() {
-            if attr.path().is_ident(QUERY_NAME) {
-                query_fields.push(key);
+fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::TokenStream {
+    let query_fields = fields.get(&EndpointAttribute::QUERY);
+    if let Some(v) = query_fields {
+        // Vec of ("#id".to_string(), serde_json::value::to_value(&self.#id).unwrap())
+        let exprs = v
+            .iter()
+            .map(|f| {
+                let id = f.ident.clone().unwrap();
+                let id_str = id.to_string();
+                quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) }
+            })
+            .collect::<Vec<proc_macro2::TokenStream>>();
+
+        // Construct query function
+        quote! {
+            fn query(&self) -> Vec<(String, Value)> {
+                vec!(#(#exprs),*)
             }
         }
-    }
-
-    match query_fields.is_empty() {
-        false => {
-            // Vec of ("#id".to_string(), serde_json::value::to_value(&self.#id).unwrap())
-            let exprs = query_fields
-                .iter()
-                .map(|id| {
-                    let id_str = id.to_string();
-                    quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) }
-                })
-                .collect::<Vec<proc_macro2::TokenStream>>();
-
-            // Construct query function
-            quote! {
-                fn query(&self) -> Vec<(String, Value)> {
-                    vec!(#(#exprs),*)
-                }
-            }
-        }
-        true => quote! {},
+    } else {
+        quote! {}
     }
 }
 
-fn gen_data(fields: &HashMap<Ident, HashSet<Meta>>) -> Result<proc_macro2::TokenStream, Error> {
-    // Find data fields
-    let mut data_fields = Vec::<&Ident>::new();
-    for (key, value) in fields.iter() {
-        for attr in value.iter() {
-            if attr.path().is_ident(DATA_NAME) {
-                data_fields.push(key);
+fn gen_data(
+    fields: &HashMap<EndpointAttribute, Vec<Field>>,
+) -> Result<proc_macro2::TokenStream, Error> {
+    let data_fields = fields.get(&EndpointAttribute::DATA);
+    if let Some(d) = data_fields {
+        if d.len() > 1 {
+            return Err(Error::new(
+                d[1].span(),
+                "May only mark one field as the data field",
+            ));
+        }
+
+        let id = d[0].ident.clone().unwrap();
+        Ok(quote! {
+            fn data(&self) -> Option<Bytes> {
+                Some(self.#id.clone())
             }
-        }
+        })
+    } else {
+        Ok(quote! {})
     }
-
-    // Return if empty
-    if data_fields.is_empty() {
-        return Ok(quote! {});
-    }
-
-    // Only allow a single data field
-    if data_fields.len() > 1 {
-        return Err(Error::new(
-            data_fields[1].span(),
-            "May only mark one field as the data field",
-        ));
-    }
-
-    // Determine data type and return correct enum variant
-    let id = data_fields[0];
-    Ok(quote! {
-        fn data(&self) -> Option<Bytes> {
-            Some(self.#id.clone())
-        }
-    })
 }
 
 /// Generates `builder()` and `exec_*` helper methods for use with
