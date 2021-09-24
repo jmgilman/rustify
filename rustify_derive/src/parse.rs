@@ -148,21 +148,3 @@ pub(crate) fn field_attributes(
 
     Ok(result)
 }
-
-/// Parses the fields of a struct and returns a map of field name -> type
-#[allow(dead_code)]
-pub(crate) fn field_types(data: &syn::Data) -> Result<HashMap<Ident, Type>, Error> {
-    if let syn::Data::Struct(data) = data {
-        Ok(data
-            .fields
-            .iter()
-            .map(|f| f.ident.clone().unwrap())
-            .zip(data.fields.iter().map(|f| f.ty.clone()))
-            .collect::<HashMap<Ident, Type>>())
-    } else {
-        Err(Error::new(
-            Span::call_site(),
-            "Failed parsing struct fields",
-        ))
-    }
-}
