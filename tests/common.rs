@@ -79,7 +79,7 @@ impl MiddleWare for Middle {
     fn request<E: Endpoint>(
         &self,
         _: &E,
-        req: &mut http::Request<Bytes>,
+        req: &mut http::Request<Vec<u8>>,
     ) -> Result<(), ClientError> {
         req.headers_mut()
             .append("X-API-Token", http::HeaderValue::from_static("mytoken"));

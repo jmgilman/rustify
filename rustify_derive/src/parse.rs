@@ -1,8 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+};
 
-use crate::Error;
-use proc_macro2::Span;
-use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type};
+use crate::{EndpointAttribute, Error};
+use syn::{
+    spanned::Spanned, Attribute, Field, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type,
+};
 
 /// Returns all [Meta] values contained in a [Meta::List].
 ///
@@ -12,7 +16,7 @@ use syn::{spanned::Spanned, Attribute, Ident, LitStr, Meta, MetaNameValue, Neste
 /// ```
 /// Would return individual [Meta] values for `query` and `data`. This function
 /// fails if the [Meta::List] is empty or contains any literals.
-pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
+pub(crate) fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     if let Meta::List(list) = &attr {
         if list.nested.is_empty() {
@@ -45,7 +49,7 @@ pub fn attr_list(attr: &Meta) -> Result<Vec<Meta>, Error> {
 /// Would return individual [MetaNameValue] values for `path` and `method`. This
 /// function fails if the [Meta::List] is empty, contains literals, or cannot
 /// be parsed as name/value pairs.
-pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
+pub(crate) fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
     let meta_list = attr_list(attr)?;
     let mut result = Vec::<MetaNameValue>::new();
     for meta in meta_list.iter() {
@@ -70,7 +74,7 @@ pub fn attr_kv(attr: &Meta) -> Result<Vec<MetaNameValue>, Error> {
 /// Would return a [HashMap] mapping individual ID's (i.e. `path` and `method`)
 /// to their [LitStr] values (i.e. "m/path" and "POST"). This function fails if
 /// the values cannot be parsed as string literals.
-pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error> {
+pub(crate) fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error> {
     let mut map = HashMap::<Ident, LitStr>::new();
     for value in values.iter() {
         let id = value.path.get_ident().unwrap().clone();
@@ -88,7 +92,7 @@ pub fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>, Error>
 }
 
 /// Searches a list of [Attribute]'s and returns any matching [crate::ATTR_NAME].
-pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
+pub(crate) fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     for attr in attrs.iter() {
         let meta = attr.parse_meta().map_err(Error::from)?;
@@ -103,26 +107,31 @@ pub fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
     Ok(result)
 }
 
-/// Parses all [Attribute]'s on the given [syn::Field]'s, searching for any
-/// attributes which match [crate::ATTR_NAME] and creating a map of field names
-/// to attached attribute parameters.
+/// Returns a mapping of endpoint attributes to a list of their fields.
 ///
-/// This function makes a basic assumption that all attributes will be a list
-/// of [Meta] values. Any other format will cause the function to fail. The
-/// function automatically provides deduplication of parameter values. For
-/// example:
-/// ```
-/// #[endpoint(query, data, data)]
-/// #[endpoint(query)]
-/// my_field: String
-/// ```
-/// Would deduplicate into `{my_field: query, data}`.
-pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>>, Error> {
-    let mut result = HashMap::<Ident, HashSet<Meta>>::new();
+/// Parses all [Attribute]'s on the given [syn::Field]'s, searching for any
+/// attributes which match [crate::ATTR_NAME] and creating a map of attributes
+/// to a list of their associated fields.
+pub(crate) fn field_attributes(
+    data: &syn::Data,
+) -> Result<HashMap<EndpointAttribute, Vec<Field>>, Error> {
+    let mut result = HashMap::<EndpointAttribute, Vec<Field>>::new();
     if let syn::Data::Struct(data) = data {
         for field in data.fields.iter() {
             // Collect all `endpoint` attributes attached to this field
             let attrs = attributes(&field.attrs)?;
+
+            // Add field as untagged is no attributes were found
+            if attrs.is_empty() {
+                match result.get_mut(&EndpointAttribute::Untagged) {
+                    Some(r) => {
+                        r.push(field.clone());
+                    }
+                    None => {
+                        result.insert(EndpointAttribute::Untagged, vec![field.clone()]);
+                    }
+                }
+            }
 
             // Combine all meta parameters from each attribute
             let attrs = attrs
@@ -133,28 +142,90 @@ pub fn field_attributes(data: &syn::Data) -> Result<HashMap<Ident, HashSet<Meta>
             // Flatten and eliminate duplicates
             let attrs = attrs.into_iter().flatten().collect::<HashSet<Meta>>();
 
-            // Map field name -> unique attribute parameters
-            result.insert(field.ident.clone().unwrap(), attrs);
+            // Add this field to the list of fields for each attribute
+            for attr in attrs.iter() {
+                let attr_ty = EndpointAttribute::try_from(attr)?;
+                match result.get_mut(&attr_ty) {
+                    Some(r) => {
+                        r.push(field.clone());
+                    }
+                    None => {
+                        result.insert(attr_ty, vec![field.clone()]);
+                    }
+                }
+            }
         }
     }
 
     Ok(result)
 }
 
-/// Parses the fields of a struct and returns a map of field name -> type
-#[allow(dead_code)]
-pub fn field_types(data: &syn::Data) -> Result<HashMap<Ident, Type>, Error> {
-    if let syn::Data::Struct(data) = data {
-        Ok(data
-            .fields
-            .iter()
-            .map(|f| f.ident.clone().unwrap())
-            .zip(data.fields.iter().map(|f| f.ty.clone()))
-            .collect::<HashMap<Ident, Type>>())
+/// Creates and instantiates a struct from a list of [Field]s.
+///
+/// This function effectively creates a new struct from a list [Field]s and then
+/// instantiates it using the same field names from the parent struct. It's
+/// intended to be used to "split" a struct into smaller structs.
+///
+/// The new struct will automatically derive `Serialize` and any [Option] fields
+/// will automatically be excluded from serialization if their value is
+/// [Option::None].
+///
+/// The result is a [proc_macro2::TokenStream] that contains the new struct and
+/// and it's instantiation. The instantiated variable can be accessed by it's
+/// static name of `__temp`.
+pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
+    // Construct struct field definitions
+    let def = fields
+        .iter()
+        .map(|f| {
+            let id = f.ident.clone().unwrap();
+            let ty = &f.ty;
+
+            // If this field is an Option, don't serialize when it's None
+            if is_std_option(ty) {
+                quote! {
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    #id: &'a #ty,
+                }
+            } else {
+                quote! { #id: &'a #ty, }
+            }
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
+
+    // Construct struct instantiation
+    let inst = fields
+        .iter()
+        .map(|f| {
+            let id = f.ident.clone().unwrap();
+            quote! { #id: &self.#id, }
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
+
+    quote! {
+        #[derive(Serialize)]
+        struct __Temp<'a> {
+            #(#def)*
+        }
+
+        let __temp = __Temp {
+            #(#inst)*
+        };
+    }
+}
+
+/// Return `true`, if the type refers to [std::option::Option]
+pub(crate) fn is_std_option(ty: &Type) -> bool {
+    if let Type::Path(tp) = ty {
+        let path = &tp.path;
+        (path.leading_colon.is_none()
+            && path.segments.len() == 1
+            && path.segments[0].ident == "Option")
+            || (path.segments.len() == 3
+                && (path.segments[0].ident == "std" || path.segments[0].ident == "core")
+                && path.segments[1].ident == "option"
+                && path.segments[2].ident == "Option")
     } else {
-        Err(Error::new(
-            Span::call_site(),
-            "Failed parsing struct fields",
-        ))
+        false
     }
 }

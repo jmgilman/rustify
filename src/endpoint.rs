@@ -1,4 +1,5 @@
 //! Contains the [Endpoint] trait and supporting functions.
+
 #[cfg(feature = "blocking")]
 use crate::blocking::client::Client as BlockingClient;
 use crate::{
@@ -9,8 +10,7 @@ use crate::{
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Request, Response};
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json::Value;
+use serde::de::DeserializeOwned;
 
 /// Represents a generic wrapper that can be applied to [Endpoint] results.
 ///
@@ -79,7 +79,7 @@ pub trait Wrapper: DeserializeOwned {
 /// # })
 /// ```
 #[async_trait]
-pub trait Endpoint: Send + Sync + Serialize + Sized {
+pub trait Endpoint: Send + Sync + Sized {
     /// The type that the raw response from executing this endpoint will
     /// automatically be deserialized to. This type must implement
     /// [serde::Deserialize].
@@ -101,14 +101,48 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     fn method(&self) -> RequestMethod;
 
     /// Optional query parameters to add to the request
-    fn query(&self) -> Vec<(String, Value)> {
-        Vec::new()
+    fn query(&self) -> Result<Option<String>, ClientError> {
+        Ok(None)
     }
 
-    /// Optional raw request data that will be sent instead of serializing the
-    /// struct.
-    fn data(&self) -> Option<Bytes> {
-        None
+    /// Optional data to add to the body of the request
+    fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
+        Ok(None)
+    }
+
+    /// Returns the full URL address of the endpoint using the base address
+    fn url(&self, base: &str) -> Result<http::Uri, ClientError> {
+        crate::http::build_url(base, &self.path(), self.query()?)
+    }
+
+    /// Returns a [Request] containing all data to execute against this endpoint
+    fn request(&self, base: &str) -> Result<Request<Vec<u8>>, ClientError> {
+        crate::http::build_request(
+            base,
+            &self.path(),
+            self.method(),
+            self.query()?,
+            self.body()?,
+        )
+    }
+
+    /// Returns a [Request] containing all data to execute against this endpoint
+    /// and which has been potentially modified by [MiddleWare].
+    fn request_mut(
+        &self,
+        base: &str,
+        middle: &impl MiddleWare,
+    ) -> Result<Request<Vec<u8>>, ClientError> {
+        let mut req = crate::http::build_request(
+            base,
+            &self.path(),
+            self.method(),
+            self.query()?,
+            self.body()?,
+        )?;
+
+        middle.request(self, &mut req)?;
+        Ok(req)
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
@@ -116,7 +150,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     async fn exec(&self, client: &impl Client) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -130,7 +164,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut(client, self, req, middle).await?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -143,7 +177,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -160,7 +194,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut(client, self, req, middle).await?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -170,7 +204,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     async fn exec_raw(&self, client: &impl Client) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
         Ok(resp.body().clone())
     }
@@ -184,7 +218,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut(client, self, req, middle).await?;
         Ok(resp.body().clone())
     }
@@ -198,7 +232,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec_block(client, req)?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -213,7 +247,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Option<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut_block(client, self, req, middle)?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -227,7 +261,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec_block(client, req)?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -245,7 +279,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut_block(client, self, req, middle)?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
@@ -256,7 +290,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     fn exec_raw_block(&self, client: &impl BlockingClient) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build(client.base(), self)?;
+        let req = self.request(client.base())?;
         let resp = exec_block(client, req)?;
         Ok(resp.body().clone())
     }
@@ -271,7 +305,7 @@ pub trait Endpoint: Send + Sync + Serialize + Sized {
     ) -> Result<Bytes, ClientError> {
         log::info!("Executing endpoint");
 
-        let req = build_mut(client.base(), self, middle)?;
+        let req = self.request_mut(client.base(), middle)?;
         let resp = exec_mut_block(client, self, req, middle)?;
         Ok(resp.body().clone())
     }
@@ -281,7 +315,7 @@ pub trait MiddleWare: Sync + Send {
     fn request<E: Endpoint>(
         &self,
         endpoint: &E,
-        req: &mut Request<Bytes>,
+        req: &mut Request<Vec<u8>>,
     ) -> Result<(), ClientError>;
     fn response<E: Endpoint>(
         &self,
@@ -290,43 +324,14 @@ pub trait MiddleWare: Sync + Send {
     ) -> Result<(), ClientError>;
 }
 
-/// Builds a [Request] from the base URL path and [Endpoint]
-fn build<E: Endpoint>(base: &str, endpoint: &E) -> Result<Request<Bytes>, ClientError> {
-    crate::http::build_request(
-        base,
-        endpoint.path().as_str(),
-        endpoint.method(),
-        endpoint.query(),
-        crate::http::build_body(endpoint, E::REQUEST_BODY_TYPE, endpoint.data())?,
-    )
-}
-
-/// Builds a [Request] from the base URL path and [Endpoint]
-fn build_mut<E: Endpoint>(
-    base: &str,
-    endpoint: &E,
-    middle: &impl MiddleWare,
-) -> Result<Request<Bytes>, ClientError> {
-    let mut req = crate::http::build_request(
-        base,
-        endpoint.path().as_str(),
-        endpoint.method(),
-        endpoint.query(),
-        crate::http::build_body(endpoint, E::REQUEST_BODY_TYPE, endpoint.data())?,
-    )?;
-
-    middle.request(endpoint, &mut req)?;
-    Ok(req)
-}
-
-async fn exec(client: &impl Client, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError> {
+async fn exec(client: &impl Client, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
     client.execute(req).await
 }
 
 async fn exec_mut(
     client: &impl Client,
     endpoint: &impl Endpoint,
-    req: Request<Bytes>,
+    req: Request<Vec<u8>>,
     middle: &impl MiddleWare,
 ) -> Result<Response<Bytes>, ClientError> {
     let mut resp = client.execute(req).await?;
@@ -337,7 +342,7 @@ async fn exec_mut(
 #[cfg(feature = "blocking")]
 fn exec_block(
     client: &impl BlockingClient,
-    req: Request<Bytes>,
+    req: Request<Vec<u8>>,
 ) -> Result<Response<Bytes>, ClientError> {
     client.execute(req)
 }
@@ -346,7 +351,7 @@ fn exec_block(
 fn exec_mut_block(
     client: &impl BlockingClient,
     endpoint: &impl Endpoint,
-    req: Request<Bytes>,
+    req: Request<Vec<u8>>,
     middle: &impl MiddleWare,
 ) -> Result<Response<Bytes>, ClientError> {
     let mut resp = client.execute(req)?;

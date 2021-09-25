@@ -4,36 +4,30 @@ use crate::{
     enums::{RequestMethod, RequestType, ResponseType},
     errors::ClientError,
 };
-use bytes::Bytes;
 use http::{Request, Uri};
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json::Value;
 use url::Url;
 
-/// Builds the body of a HTTP request in byte form using the given input.
-///
-/// If `data` is not None, the contents of data will be returned. Otherwise,
-/// the `object` will be attempted to be serialized to a byte array using the
-/// given [RequestType].
-pub fn build_body(
-    object: &impl Serialize,
-    ty: RequestType,
-    data: Option<Bytes>,
-) -> Result<Bytes, ClientError> {
-    match data {
-        Some(d) => Ok(d),
-        None => match ty {
-            RequestType::JSON => {
-                let parse_data = serde_json::to_string(object)
-                    .map_err(|e| ClientError::DataParseError { source: e.into() })?;
-                Ok(Bytes::from(match parse_data.as_str() {
-                    "null" => "".to_string(),
-                    "{}" => "".to_string(),
-                    _ => parse_data,
-                }))
-            }
-        },
+/// Builds a request body by serializing an object using a serializer determined
+/// by the [RequestType].
+pub fn build_body(object: &impl Serialize, ty: RequestType) -> Result<Vec<u8>, ClientError> {
+    match ty {
+        RequestType::JSON => {
+            let parse_data = serde_json::to_string(object)
+                .map_err(|e| ClientError::DataParseError { source: e.into() })?;
+            Ok(match parse_data.as_str() {
+                "null" => "".as_bytes().to_vec(),
+                "{}" => "".as_bytes().to_vec(),
+                _ => parse_data.as_bytes().to_vec(),
+            })
+        }
     }
+}
+
+/// Builds a query string by serializing an object
+pub fn build_query(object: &impl Serialize) -> Result<String, ClientError> {
+    serde_urlencoded::to_string(object)
+        .map_err(|e| ClientError::UrlQueryParseError { source: e.into() })
 }
 
 /// Builds a [Request] using the given [Endpoint] and base URL
@@ -41,9 +35,9 @@ pub fn build_request(
     base: &str,
     path: &str,
     method: RequestMethod,
-    query: Vec<(String, Value)>,
-    data: Bytes,
-) -> Result<Request<Bytes>, ClientError> {
+    query: Option<String>,
+    data: Option<Vec<u8>>,
+) -> Result<Request<Vec<u8>>, ClientError> {
     let uri = build_url(base, path, query)?;
 
     let method_err = method.clone();
@@ -51,7 +45,7 @@ pub fn build_request(
     Request::builder()
         .uri(uri)
         .method(method)
-        .body(data)
+        .body(data.unwrap_or_else(Vec::<u8>::new))
         .map_err(|e| ClientError::RequestBuildError {
             source: e,
             method: method_err,
@@ -61,7 +55,7 @@ pub fn build_request(
 
 /// Combines the given base URL with the relative URL path from this
 /// Endpoint to create a fully qualified URL.
-pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<Uri, ClientError> {
+pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, ClientError> {
     log::info!(
         "Building endpoint url from {} base URL and {} action",
         base,
@@ -70,13 +64,8 @@ pub fn build_url(base: &str, path: &str, query: Vec<(String, Value)>) -> Result<
 
     let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError { source: e })?;
     url.path_segments_mut().unwrap().extend(path.split('/'));
-
-    {
-        let mut pairs = url.query_pairs_mut();
-        let serializer = serde_urlencoded::Serializer::new(&mut pairs);
-        query
-            .serialize(serializer)
-            .map_err(|e| ClientError::UrlQueryParseError { source: e.into() })?;
+    if let Some(q) = query {
+        url.set_query(Some(q.as_str()));
     }
 
     url.to_string()

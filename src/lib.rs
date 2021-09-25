@@ -22,9 +22,8 @@
 //! ```should_panic
 //! use rustify::{Client, Endpoint};
 //! use rustify_derive::Endpoint;
-//! use serde::Serialize;
 //!
-//! #[derive(Debug, Endpoint, Serialize)]
+//! #[derive(Endpoint)]
 //! #[endpoint(path = "test/path")]
 //! struct Test {}
 //!
@@ -69,6 +68,10 @@ pub mod endpoint;
 pub mod enums;
 pub mod errors;
 pub mod http;
+
+#[doc(hidden)]
+#[path = "private/mod.rs"]
+pub mod __private;
 
 pub use crate::{
     clients::reqwest::Client,

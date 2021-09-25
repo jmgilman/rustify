@@ -6,7 +6,7 @@ use serde::Serialize;
 #[endpoint(path = "test/path")]
 struct Test {
     pub name: String,
-    #[endpoint(data)]
+    #[endpoint(raw)]
     pub data: String,
 }
 
@@ -14,9 +14,9 @@ struct Test {
 #[endpoint(path = "test/path")]
 struct TestTwo {
     pub name: String,
-    #[endpoint(data)]
+    #[endpoint(raw)]
     pub data: Vec<u8>,
-    #[endpoint(data)]
+    #[endpoint(raw)]
     pub data_two: Vec<u8>,
 }
 
