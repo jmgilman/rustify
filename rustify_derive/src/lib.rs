@@ -133,7 +133,7 @@ fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::To
 /// * If a field is found with the [EndpointAttribute::RAW] attribute that field
 ///   is returned directly as the request body. The assumption is this field
 ///   will always be a [Vec<u8>].
-/// * If any fields are found with the [EndpointAttribute::BODY] attribue they
+/// * If any fields are found with the [EndpointAttribute::BODY] attribute they
 ///   are combined into a new struct and then serialized into the request body
 ///   depending on the request type of the Endpoint.
 /// * If neither of the above two conditions are true, and there are fields
