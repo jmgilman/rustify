@@ -42,9 +42,8 @@ request to `http://api.com/test/path` and expect an empty response:
 ```rust
 use rustify::{Client, Endpoint};
 use rustify_derive::Endpoint;
-use serde::Serialize;
 
-#[derive(Debug, Endpoint, Serialize)]
+#[derive(Endpoint)]
 #[endpoint(path = "test/path")]
 struct Test {}
 

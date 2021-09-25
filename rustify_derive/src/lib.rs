@@ -26,8 +26,11 @@ const ATTR_NAME: &str = "endpoint";
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum EndpointAttribute {
-    DATA,
+    BODY,
     QUERY,
+    RAW,
+    SKIP,
+    UNTAGGED,
 }
 
 impl TryFrom<&Meta> for EndpointAttribute {
@@ -35,8 +38,10 @@ impl TryFrom<&Meta> for EndpointAttribute {
     fn try_from(m: &Meta) -> Result<Self, Self::Error> {
         match m.path().get_ident() {
             Some(i) => match i.to_string().to_lowercase().as_str() {
-                "data" => Ok(EndpointAttribute::DATA),
+                "body" => Ok(EndpointAttribute::BODY),
                 "query" => Ok(EndpointAttribute::QUERY),
+                "raw" => Ok(EndpointAttribute::RAW),
+                "skip" => Ok(EndpointAttribute::SKIP),
                 _ => Err(Error::new(
                     m.span(),
                     format!("Unknown attribute: {}", i).as_str(),
@@ -99,32 +104,20 @@ fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 
 /// Generates the query method for generating query parameters.
 ///
-/// Searches the given map of (field name -> attribute parameter list) and looks
-/// for any field which contains `QUERY_NAME`. A list of all field names which
-/// are marked with the query parameter is generated and then mapped into a
-/// list of token streams which appear as below:
-/// ```
-/// vec!(("field_name".to_string(), serde_json::value::to_value(&self.field_name).unwrap()))
-/// ```
-/// If no fields are marked the method is not generated which allows the trait
-/// method to be used (defaults to empty vec).
+/// If any fields are found with the [EndpointAttribute::QUERY] attribute they
+/// are combined into a new struct and then serialized into a query string. If
+/// the attribute is not found on any of the fields the query method is not
+/// generated.
 fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::TokenStream {
     let query_fields = fields.get(&EndpointAttribute::QUERY);
     if let Some(v) = query_fields {
-        // Vec of ("#id".to_string(), serde_json::value::to_value(&self.#id).unwrap())
-        let exprs = v
-            .iter()
-            .map(|f| {
-                let id = f.ident.clone().unwrap();
-                let id_str = id.to_string();
-                quote! {(#id_str.to_string(), serde_json::value::to_value(&self.#id).unwrap()) }
-            })
-            .collect::<Vec<proc_macro2::TokenStream>>();
-
         // Construct query function
+        let temp = parse::fields_to_struct(v);
         quote! {
-            fn query(&self) -> Vec<(String, Value)> {
-                vec!(#(#exprs),*)
+            fn query(&self) -> Result<Option<String>, ClientError> {
+                #temp
+
+                Ok(Some(build_query(&__temp)?))
             }
         }
     } else {
@@ -132,24 +125,58 @@ fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::To
     }
 }
 
-fn gen_data(
+/// Generates the body method for generating the request body.
+///
+/// The final result is determined by which attributes are present and/or
+/// missing on the struct fields. The following order is respected:
+///
+/// * If a field is found with the [EndpointAttribute::RAW] attribute that field
+///   is returned directly as the request body. The assumption is this field
+///   will always be a [Vec<u8>].
+/// * If any fields are found with the [EndpointAttribute::BODY] attribue they
+///   are combined into a new struct and then serialized into the request body
+///   depending on the request type of the Endpoint.
+/// * If neither of the above two conditions are true, and there are fields
+///   found that don't have any attribute, those fields are combined into a new
+///   struct and then serialized into the request body depending on the request
+///   type of the Endpoint.
+/// * If none of the above is true, the body method is not generated.
+fn gen_body(
     fields: &HashMap<EndpointAttribute, Vec<Field>>,
 ) -> Result<proc_macro2::TokenStream, Error> {
-    let data_fields = fields.get(&EndpointAttribute::DATA);
-    if let Some(d) = data_fields {
-        if d.len() > 1 {
-            return Err(Error::new(
-                d[1].span(),
-                "May only mark one field as the data field",
-            ));
+    // Check for a raw field first
+    if let Some(v) = fields.get(&EndpointAttribute::RAW) {
+        if v.len() > 1 {
+            return Err(Error::new(v[1].span(), "May only mark one field as raw"));
         }
 
-        let id = d[0].ident.clone().unwrap();
+        let id = v[0].ident.clone().unwrap();
         Ok(quote! {
-            fn data(&self) -> Option<Bytes> {
-                Some(self.#id.clone())
+            fn body(&self) -> Result<Option<Vec<u8>>, ClientError>{
+                Ok(Some(self.#id.clone()))
             }
         })
+    // Then for any body fields
+    } else if let Some(v) = fields.get(&EndpointAttribute::BODY) {
+        let temp = parse::fields_to_struct(v);
+        Ok(quote! {
+            fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
+                #temp
+
+                Ok(Some(build_body(&__temp, Self::REQUEST_BODY_TYPE)?))
+            }
+        })
+    // Then for any untagged fields
+    } else if let Some(v) = fields.get(&EndpointAttribute::UNTAGGED) {
+        let temp = parse::fields_to_struct(v);
+        Ok(quote! {
+            fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
+                #temp
+
+                Ok(Some(build_body(&__temp, Self::REQUEST_BODY_TYPE)?))
+            }
+        })
+    // Leave it undefined if no body fields found
     } else {
         Ok(quote! {})
     }
@@ -248,9 +275,9 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Generate query function
     let query = gen_query(&field_attrs);
 
-    // Generate data
-    let data = match gen_data(&field_attrs) {
-        Ok(v) => v,
+    // Generate body function
+    let body = match gen_body(&field_attrs) {
+        Ok(d) => d,
         Err(e) => return e.into_tokens(),
     };
 
@@ -268,12 +295,12 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let const_ident = Ident::new(const_name.as_str(), Span::call_site());
     quote! {
         const #const_ident: () = {
-            use ::bytes::Bytes;
-            use ::rustify::client::Client;
-            use ::rustify::endpoint::Endpoint;
-            use ::rustify::enums::{RequestMethod, RequestType, ResponseType};
-            use ::rustify::errors::ClientError;
-            use ::serde_json::Value;
+            use rustify::__private::serde::Serialize;
+            use rustify::http::{build_body, build_query};
+            use rustify::client::Client;
+            use rustify::endpoint::Endpoint;
+            use rustify::enums::{RequestMethod, RequestType, ResponseType};
+            use rustify::errors::ClientError;
 
             impl #impl_generics Endpoint for #id #ty_generics #where_clause {
                 type Response = #response;
@@ -290,7 +317,8 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 
                 #query
 
-                #data
+
+                #body
             }
 
             #builder

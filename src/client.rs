@@ -16,7 +16,7 @@ pub const HTTP_SUCCESS_CODES: RangeInclusive<u16> = 200..=208;
 pub trait Client: Sync + Send {
     /// Sends the given [Request] and returns a [Response]. Implementations
     /// should consolidate all errors into the [ClientError] type.
-    async fn send(&self, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError>;
+    async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError>;
 
     /// Returns the base URL the client is configured with. This is used for
     /// creating the fully qualified URLs used when executing
@@ -25,7 +25,7 @@ pub trait Client: Sync + Send {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    async fn execute(&self, req: Request<Bytes>) -> Result<Response<Bytes>, ClientError> {
+    async fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
         log::info!(
             "Client sending {} request to {} with {} bytes of data",
             req.method().to_string(),

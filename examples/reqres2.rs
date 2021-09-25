@@ -5,26 +5,29 @@ use derive_builder::Builder;
 use rustify::{errors::ClientError, Client, Endpoint, MiddleWare};
 use rustify_derive::Endpoint;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 
 // With this endpoint we are actually giving the struct some fields that will be
-// used to construct the JSON body of the request. Additionally, we need to tell
-// rustify that this should be a POST request.
+// used to construct the JSON body of the request. When building a request body,
+// rustify performs a few checks to determine how the body should be
+// constructed. You can tag a field with `#[endpoint(raw)]` to use that field
+// directly as the request body (it must be a `Vec<u8>`), you can tag one or
+// more fields with #[endpoint(body)] to serialize them together into the
+// request body, or as in the case below, if neither of the above tags are found
+// then rustify automatically serializes all "untagged" fields as the request
+// body.
 //
 // The actual API doesn't include an `opt` argument, however, it's included here
 // for demonstration purposes. Using `setter(into)` here makes creating the
 // request easier since we can pass string slices, as an example. Using
 // `setter(strip_option)` allows passing in optional arguments without wrapping
-// them in `Some`. The combination of `builder(default)` with
-// `skip_serializing_none` means that any optional field that is not set when
-// the endpoint is built will not be included in the request body. This prevents
-// sending something like {"opt": ""} which in some cases could actually
-// overwrite an existing value.
+// them in `Some`. By default, when rustify serializes the request body, any
+// `Option` fields that have their value set to `None` will be skipped. This
+// prevents sending something like {"opt": ""} which in some cases could
+// actually overwrite an existing value.
 //
 // The reqres API doesn't specify which arguments are required, however, for the
 // sake of this example we assume `name` and `job` are required and we therefore
-// do not wrap them in an Option<> enum.
-#[skip_serializing_none]
+// do not wrap them in an `Option`.
 #[derive(Builder, Default, Endpoint, Serialize)]
 #[endpoint(
     path = "users",
@@ -60,7 +63,7 @@ impl MiddleWare for Middle {
     fn request<E: Endpoint>(
         &self,
         _: &E,
-        req: &mut http::Request<Bytes>,
+        req: &mut http::Request<Vec<u8>>,
     ) -> Result<(), ClientError> {
         // Prepending to the path of a URL is not a trivial task. Here we use
         // the `url` crate which offers better support for mutating a URL. We

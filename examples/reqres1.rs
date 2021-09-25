@@ -3,13 +3,8 @@ use std::collections::HashMap;
 use derive_builder::Builder;
 use rustify::{Client, Endpoint, Wrapper};
 use rustify_derive::Endpoint;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize};
 
-// Endpoints must derive `serde::Serialize` as rustify uses the fields of the
-// endpoint struct to form the contents of the request body. If the struct
-// contains zero fields then no request body will be sent. It's important to
-// tag fields that shouldn't show up in the request body with `#[serde(skip)]`.
-//
 // While using a builder archetype for requests is not required, it's often the
 // cleanest way for building requests. For this endpoint it doesn't bring too
 // much benefit, however, for consistency it's implemented anyways.
@@ -23,13 +18,12 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 // * method: defaults to GET
 // * request_type: defaults to JSON
 // * response_type: defaults to JSON
-#[derive(Builder, Endpoint, Serialize)]
+#[derive(Builder, Endpoint)]
 #[endpoint(path = "/api/users", response = "Vec<User>", builder = "true")]
 struct ListUsersRequest {
     // Tagging this field with #[endpoint(query)] informs rustify that this
     // field should be appended as a query parameter to the request URL.
     #[endpoint(query)]
-    #[serde(skip)]
     pub page: usize,
 }
 

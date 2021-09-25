@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::{EndpointAttribute, Error};
-use proc_macro2::Span;
 use syn::{
     spanned::Spanned, Attribute, Field, Ident, LitStr, Meta, MetaNameValue, NestedMeta, Type,
 };
@@ -122,6 +121,18 @@ pub(crate) fn field_attributes(
             // Collect all `endpoint` attributes attached to this field
             let attrs = attributes(&field.attrs)?;
 
+            // Add field as untagged is no attributes were found
+            if attrs.is_empty() {
+                match result.get_mut(&EndpointAttribute::UNTAGGED) {
+                    Some(r) => {
+                        r.push(field.clone());
+                    }
+                    None => {
+                        result.insert(EndpointAttribute::UNTAGGED, vec![field.clone()]);
+                    }
+                }
+            }
+
             // Combine all meta parameters from each attribute
             let attrs = attrs
                 .iter()
@@ -147,4 +158,74 @@ pub(crate) fn field_attributes(
     }
 
     Ok(result)
+}
+
+/// Creates and instantiates a struct from a list of [Field]s.
+///
+/// This function effectively creates a new struct from a list [Field]s and then
+/// instantiates it using the same field names from the parent struct. It's
+/// intended to be used to "split" a struct into smaller structs.
+///
+/// The new struct will automatically derive `Serialize` and any [Option] fields
+/// will automatically be excluded from serialization if their value is
+/// [Option::None].
+///
+/// The result is a [proc_macro2::TokenStream] that contains the new struct and
+/// and it's instantiation. The instantiated variable can be accessed by it's
+/// static name of `__temp`.
+pub(crate) fn fields_to_struct(fields: &Vec<Field>) -> proc_macro2::TokenStream {
+    // Construct struct field definitions
+    let def = fields
+        .iter()
+        .map(|f| {
+            let id = f.ident.clone().unwrap();
+            let ty = &f.ty;
+
+            // If this field is an Option, don't serialize when it's None
+            if is_std_option(&ty) {
+                quote! {
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    #id: &'a #ty,
+                }
+            } else {
+                quote! { #id: &'a #ty, }
+            }
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
+
+    // Construct struct instantiation
+    let inst = fields
+        .iter()
+        .map(|f| {
+            let id = f.ident.clone().unwrap();
+            quote! { #id: &self.#id, }
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
+
+    quote! {
+        #[derive(Serialize)]
+        struct __Temp<'a> {
+            #(#def)*
+        }
+
+        let __temp = __Temp {
+            #(#inst)*
+        };
+    }
+}
+
+/// Return `true`, if the type refers to [std::option::Option]
+pub(crate) fn is_std_option(ty: &Type) -> bool {
+    if let Type::Path(tp) = ty {
+        let path = &tp.path;
+        (path.leading_colon.is_none()
+            && path.segments.len() == 1
+            && path.segments[0].ident == "Option")
+            || (path.segments.len() == 3
+                && (path.segments[0].ident == "std" || path.segments[0].ident == "core")
+                && path.segments[1].ident == "option"
+                && path.segments[2].ident == "Option")
+    } else {
+        false
+    }
 }
