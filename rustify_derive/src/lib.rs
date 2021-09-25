@@ -26,11 +26,11 @@ const ATTR_NAME: &str = "endpoint";
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum EndpointAttribute {
-    BODY,
-    QUERY,
-    RAW,
-    SKIP,
-    UNTAGGED,
+    Body,
+    Query,
+    Raw,
+    Skip,
+    Untagged,
 }
 
 impl TryFrom<&Meta> for EndpointAttribute {
@@ -38,10 +38,10 @@ impl TryFrom<&Meta> for EndpointAttribute {
     fn try_from(m: &Meta) -> Result<Self, Self::Error> {
         match m.path().get_ident() {
             Some(i) => match i.to_string().to_lowercase().as_str() {
-                "body" => Ok(EndpointAttribute::BODY),
-                "query" => Ok(EndpointAttribute::QUERY),
-                "raw" => Ok(EndpointAttribute::RAW),
-                "skip" => Ok(EndpointAttribute::SKIP),
+                "body" => Ok(EndpointAttribute::Body),
+                "query" => Ok(EndpointAttribute::Query),
+                "raw" => Ok(EndpointAttribute::Raw),
+                "skip" => Ok(EndpointAttribute::Skip),
                 _ => Err(Error::new(
                     m.span(),
                     format!("Unknown attribute: {}", i).as_str(),
@@ -104,12 +104,12 @@ fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 
 /// Generates the query method for generating query parameters.
 ///
-/// If any fields are found with the [EndpointAttribute::QUERY] attribute they
+/// If any fields are found with the [EndpointAttribute::Query] attribute they
 /// are combined into a new struct and then serialized into a query string. If
 /// the attribute is not found on any of the fields the query method is not
 /// generated.
 fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::TokenStream {
-    let query_fields = fields.get(&EndpointAttribute::QUERY);
+    let query_fields = fields.get(&EndpointAttribute::Query);
     if let Some(v) = query_fields {
         // Construct query function
         let temp = parse::fields_to_struct(v);
@@ -130,10 +130,10 @@ fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::To
 /// The final result is determined by which attributes are present and/or
 /// missing on the struct fields. The following order is respected:
 ///
-/// * If a field is found with the [EndpointAttribute::RAW] attribute that field
+/// * If a field is found with the [EndpointAttribute::Raw] attribute that field
 ///   is returned directly as the request body. The assumption is this field
 ///   will always be a [Vec<u8>].
-/// * If any fields are found with the [EndpointAttribute::BODY] attribute they
+/// * If any fields are found with the [EndpointAttribute::Body] attribute they
 ///   are combined into a new struct and then serialized into the request body
 ///   depending on the request type of the Endpoint.
 /// * If neither of the above two conditions are true, and there are fields
@@ -145,7 +145,7 @@ fn gen_body(
     fields: &HashMap<EndpointAttribute, Vec<Field>>,
 ) -> Result<proc_macro2::TokenStream, Error> {
     // Check for a raw field first
-    if let Some(v) = fields.get(&EndpointAttribute::RAW) {
+    if let Some(v) = fields.get(&EndpointAttribute::Raw) {
         if v.len() > 1 {
             return Err(Error::new(v[1].span(), "May only mark one field as raw"));
         }
@@ -157,7 +157,7 @@ fn gen_body(
             }
         })
     // Then for any body fields
-    } else if let Some(v) = fields.get(&EndpointAttribute::BODY) {
+    } else if let Some(v) = fields.get(&EndpointAttribute::Body) {
         let temp = parse::fields_to_struct(v);
         Ok(quote! {
             fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
@@ -167,7 +167,7 @@ fn gen_body(
             }
         })
     // Then for any untagged fields
-    } else if let Some(v) = fields.get(&EndpointAttribute::UNTAGGED) {
+    } else if let Some(v) = fields.get(&EndpointAttribute::Untagged) {
         let temp = parse::fields_to_struct(v);
         Ok(quote! {
             fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {

@@ -123,12 +123,12 @@ pub(crate) fn field_attributes(
 
             // Add field as untagged is no attributes were found
             if attrs.is_empty() {
-                match result.get_mut(&EndpointAttribute::UNTAGGED) {
+                match result.get_mut(&EndpointAttribute::Untagged) {
                     Some(r) => {
                         r.push(field.clone());
                     }
                     None => {
-                        result.insert(EndpointAttribute::UNTAGGED, vec![field.clone()]);
+                        result.insert(EndpointAttribute::Untagged, vec![field.clone()]);
                     }
                 }
             }
@@ -173,7 +173,7 @@ pub(crate) fn field_attributes(
 /// The result is a [proc_macro2::TokenStream] that contains the new struct and
 /// and it's instantiation. The instantiated variable can be accessed by it's
 /// static name of `__temp`.
-pub(crate) fn fields_to_struct(fields: &Vec<Field>) -> proc_macro2::TokenStream {
+pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
     // Construct struct field definitions
     let def = fields
         .iter()
@@ -182,7 +182,7 @@ pub(crate) fn fields_to_struct(fields: &Vec<Field>) -> proc_macro2::TokenStream 
             let ty = &f.ty;
 
             // If this field is an Option, don't serialize when it's None
-            if is_std_option(&ty) {
+            if is_std_option(ty) {
                 quote! {
                     #[serde(skip_serializing_if = "Option::is_none")]
                     #id: &'a #ty,

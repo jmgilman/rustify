@@ -107,7 +107,7 @@ pub trait Endpoint: Send + Sync + Sized {
 
     /// Optional data to add to the body of the request
     fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
-        return Ok(None);
+        Ok(None)
     }
 
     /// Returns the full URL address of the endpoint using the base address

@@ -45,7 +45,7 @@ pub fn build_request(
     Request::builder()
         .uri(uri)
         .method(method)
-        .body(data.unwrap_or_else(|| Vec::<u8>::new()))
+        .body(data.unwrap_or_else(Vec::<u8>::new))
         .map_err(|e| ClientError::RequestBuildError {
             source: e,
             method: method_err,
