@@ -158,7 +158,7 @@ pub trait Endpoint: Send + Sync + Sized {
     /// The type that the raw response from executing this endpoint will
     /// deserialized into. This type is passed on to the [EndpointResult] and is
     /// used to determine the type returned when the `parse()` method is called.
-    type Response: DeserializeOwned;
+    type Response: DeserializeOwned + Send + Sync;
 
     /// The content type of the request body
     const REQUEST_BODY_TYPE: RequestType;
@@ -257,13 +257,13 @@ pub trait Endpoint: Send + Sync + Sized {
 /// the actual HTTP [Response] and the final result type. The response can be
 /// parsed into the final result type by calling `parse()` or optionally
 /// wrapped by a [Wrapper] by calling `wrap()`.
-pub struct EndpointResult<T: DeserializeOwned> {
+pub struct EndpointResult<T: DeserializeOwned + Send + Sync> {
     pub response: Response<Vec<u8>>,
     pub ty: ResponseType,
     inner: PhantomData<T>,
 }
 
-impl<T: DeserializeOwned> EndpointResult<T> {
+impl<T: DeserializeOwned + Send + Sync> EndpointResult<T> {
     /// Returns a new [EndpointResult].
     pub fn new(response: Response<Vec<u8>>, ty: ResponseType) -> Self {
         EndpointResult {
