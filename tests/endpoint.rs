@@ -172,7 +172,7 @@ async fn test_result() {
 
     m.assert();
     assert!(r.is_ok());
-    assert_eq!(r.unwrap().unwrap().age, 30);
+    assert_eq!(r.unwrap().parse().unwrap().age, 30);
 }
 
 #[tokio::test]
@@ -214,11 +214,11 @@ async fn test_mutate() {
             .header("X-API-Token", "mytoken");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_mut(&t.client, &Middle {}).await;
+    let r = e.with_middleware(&Middle {}).exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
-    assert_eq!(r.unwrap().unwrap().age, 30);
+    assert_eq!(r.unwrap().parse().unwrap().age, 30);
 }
 
 #[tokio::test]
@@ -237,7 +237,8 @@ async fn test_wrapper() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_wrap(&t.client).await.unwrap().map(strip).unwrap();
+    let r = e.exec(&t.client).await.unwrap();
+    let r = r.wrap::<_>().map(strip).unwrap();
 
     m.assert();
     assert_eq!(r.age, 30);
@@ -256,11 +257,11 @@ async fn test_raw_response() {
         when.method(GET).path("/test/path");
         then.status(200).json_body(json!({"result": {"age": 30}}));
     });
-    let r = e.exec_raw(&t.client).await;
+    let r = e.exec(&t.client).await;
 
     m.assert();
     assert!(r.is_ok());
-    assert_eq!(r.unwrap(), resp_data.to_string().as_bytes());
+    assert_eq!(r.unwrap().raw(), resp_data.to_string().as_bytes());
 }
 
 // #[tokio::test]
@@ -340,10 +341,11 @@ async fn test_complex() {
         .kind("test")
         .build()
         .unwrap()
-        .exec_mut(&t.client, &Middle {})
+        .with_middleware(&Middle {})
+        .exec(&t.client)
         .await;
 
     m.assert();
     assert!(r.is_ok());
-    assert_eq!(r.unwrap().unwrap().age, 30);
+    assert_eq!(r.unwrap().parse().unwrap().age, 30);
 }

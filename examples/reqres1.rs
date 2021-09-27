@@ -49,7 +49,7 @@ pub struct PaginationWrapper<T> {
 // This is almost always the form that the implementation will take.
 // Unfortunately, Rust does not support associated types having a default
 // type set to a generic, so we must define it when we use it.
-impl<T: DeserializeOwned> Wrapper for PaginationWrapper<T> {
+impl<T: DeserializeOwned + Send + Sync> Wrapper for PaginationWrapper<T> {
     type Value = T;
 }
 
@@ -81,17 +81,13 @@ async fn main() {
     // that all required fields have been specified.
     let endpoint = ListUsersRequest::builder().page(1).build().unwrap();
 
-    // Here is where the magic of rustify happens. We call `exec_wrap()` which
-    // takes two arguments: an instance of a `Client` and a generic type
-    // parameter which specifies what the response should be wrapped in. Behind
-    // the scenes rustify will initiate a connection to the API server and send
-    // a HTTP request as defined by the endpoint. In this case, it sends a GET
-    // request to https://reqres.in/api/users?page=1 and automatically
-    // deserializes the response into a PaginationWrapper<ListUsersResponse>.
-    //
-    // The response type is wrapped in Option<> since it's possible for the API
-    // to return an empty response.
-    let result: Result<Option<PaginationWrapper<_>>, _> = endpoint.exec_wrap(&client).await;
+    // Here is where the magic of rustify happens. We call `exec()` which
+    // takes an instance of a `Client` and behind the scenes rustify will
+    // initiate a connection to the API server and send a HTTP request as
+    // defined by the endpoint. In this case, it sends a GET request to
+    // https://reqres.in/api/users?page=1 and automatically deserializes the
+    // response into a PaginationWrapper<ListUsersResponse> when we call parse.
+    let result = endpoint.exec(&client).await;
 
     // Executing an endpoint can fail for a number of reasons: there was a
     // problem building the request, an underlying network issue, the server
@@ -99,11 +95,15 @@ async fn main() {
     // deserialized, etc. Rustify uses a common error enum which contains a
     // number of variants for identifying the root cause.
     match result {
-        Ok(r) => match r {
-            Some(d) => {
+        // We inform rustify of the wrapped response by calling `wrap()` instead
+        // of `parse()` which takes a single type argument that instructs
+        // rustify how to properly parse the result (in this case our data is
+        // wrapped in a pagination wrapper).
+        Ok(r) => match r.wrap::<PaginationWrapper<_>>() {
+            Ok(d) => {
                 d.data.iter().for_each(print_user);
             }
-            None => println!("Error: The server returned an empty response!"),
+            Err(e) => println!("Error: {:#?}", e),
         },
         Err(e) => println!("Error: {:#?}", e),
     };

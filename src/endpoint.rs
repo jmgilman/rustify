@@ -1,5 +1,7 @@
 //! Contains the [Endpoint] trait and supporting functions.
 
+use std::marker::PhantomData;
+
 #[cfg(feature = "blocking")]
 use crate::blocking::client::Client as BlockingClient;
 use crate::{
@@ -8,7 +10,6 @@ use crate::{
     errors::ClientError,
 };
 use async_trait::async_trait;
-use bytes::Bytes;
 use http::{Request, Response};
 use serde::de::DeserializeOwned;
 
@@ -20,8 +21,60 @@ use serde::de::DeserializeOwned;
 /// [Endpoint::exec_wrap] to automatically wrap the [Endpoint::Response] in the
 /// wrapper. The only requirement is that the [Wrapper::Value] must enclose
 /// the [Endpoint::Response].
-pub trait Wrapper: DeserializeOwned {
+pub trait Wrapper: DeserializeOwned + Send + Sync {
     type Value;
+}
+
+pub struct MutatedEndpoint<'a, E: Endpoint, M: MiddleWare> {
+    endpoint: E,
+    middleware: &'a M,
+}
+
+impl<'a, E: Endpoint, M: MiddleWare> MutatedEndpoint<'a, E, M> {
+    pub fn new(endpoint: E, middleware: &'a M) -> Self {
+        MutatedEndpoint {
+            endpoint,
+            middleware,
+        }
+    }
+}
+
+#[async_trait]
+impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
+    type Response = E::Response;
+    const REQUEST_BODY_TYPE: RequestType = E::REQUEST_BODY_TYPE;
+    const RESPONSE_BODY_TYPE: ResponseType = E::RESPONSE_BODY_TYPE;
+
+    fn path(&self) -> String {
+        self.endpoint.path()
+    }
+
+    fn method(&self) -> RequestMethod {
+        self.endpoint.method()
+    }
+
+    fn query(&self) -> Result<Option<String>, ClientError> {
+        self.endpoint.query()
+    }
+
+    fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
+        self.endpoint.body()
+    }
+
+    fn url(&self, base: &str) -> Result<http::Uri, ClientError> {
+        self.endpoint.url(base)
+    }
+
+    async fn exec(
+        &self,
+        client: &impl Client,
+    ) -> Result<EndpointResult<Self::Response>, ClientError> {
+        log::info!("Executing endpoint");
+
+        let req = self.request_mut(client.base(), self.middleware)?;
+        let resp = exec_mut(client, self, req, self.middleware).await?;
+        Ok(EndpointResult::new(resp, Self::RESPONSE_BODY_TYPE))
+    }
 }
 
 /// Represents a remote HTTP endpoint which can be executed using a
@@ -147,80 +200,19 @@ pub trait Endpoint: Send + Sync + Sized {
 
     /// Executes the Endpoint using the given [Client] and returns the
     /// deserialized [Endpoint::Response].
-    async fn exec(&self, client: &impl Client) -> Result<Option<Self::Response>, ClientError> {
+    async fn exec(
+        &self,
+        client: &impl Client,
+    ) -> Result<EndpointResult<Self::Response>, ClientError> {
         log::info!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
+        Ok(EndpointResult::new(resp, Self::RESPONSE_BODY_TYPE))
     }
 
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized response as defined by [Endpoint::Response].
-    async fn exec_mut(
-        &self,
-        client: &impl Client,
-        middle: &impl MiddleWare,
-    ) -> Result<Option<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
-
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut(client, self, req, middle).await?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
-    }
-
-    /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Response] wrapped in a [Wrapper].
-    async fn exec_wrap<W>(&self, client: &impl Client) -> Result<Option<W>, ClientError>
-    where
-        W: Wrapper<Value = Self::Response>,
-    {
-        log::info!("Executing endpoint");
-
-        let req = self.request(client.base())?;
-        let resp = exec(client, req).await?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
-    }
-
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized [Endpoint::Response] wrapped in a [Wrapper].
-    async fn exec_wrap_mut<W>(
-        &self,
-        client: &impl Client,
-        middle: &impl MiddleWare,
-    ) -> Result<Option<W>, ClientError>
-    where
-        W: Wrapper<Value = Self::Response>,
-    {
-        log::info!("Executing endpoint");
-
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut(client, self, req, middle).await?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
-    }
-
-    /// Executes the Endpoint using the given [Client], returning the raw
-    /// response as a byte array.
-    async fn exec_raw(&self, client: &impl Client) -> Result<Bytes, ClientError> {
-        log::info!("Executing endpoint");
-
-        let req = self.request(client.base())?;
-        let resp = exec(client, req).await?;
-        Ok(resp.body().clone())
-    }
-
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the raw response as a byte array.
-    async fn exec_raw_mut(
-        &self,
-        client: &impl Client,
-        middle: &impl MiddleWare,
-    ) -> Result<Bytes, ClientError> {
-        log::info!("Executing endpoint");
-
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut(client, self, req, middle).await?;
-        Ok(resp.body().clone())
+    fn with_middleware<M: MiddleWare>(self, middleware: &M) -> MutatedEndpoint<Self, M> {
+        MutatedEndpoint::new(self, middleware)
     }
 
     /// Executes the Endpoint using the given [Client] and returns the
@@ -236,78 +228,50 @@ pub trait Endpoint: Send + Sync + Sized {
         let resp = exec_block(client, req)?;
         crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
     }
+}
 
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized response as defined by [Endpoint::Response].
-    #[cfg(feature = "blocking")]
-    fn exec_mut_block(
-        &self,
-        client: &impl BlockingClient,
-        middle: &impl MiddleWare,
-    ) -> Result<Option<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
+pub struct EndpointResult<T: DeserializeOwned> {
+    pub response: Response<Vec<u8>>,
+    pub ty: ResponseType,
+    inner: PhantomData<T>,
+}
 
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut_block(client, self, req, middle)?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
+impl<T: DeserializeOwned> EndpointResult<T> {
+    pub fn new(response: Response<Vec<u8>>, ty: ResponseType) -> Self {
+        EndpointResult {
+            response,
+            ty,
+            inner: PhantomData,
+        }
     }
 
-    /// Executes the Endpoint using the given [Client] and returns the
-    /// deserialized [Endpoint::Response] wrapped in a [Wrapper].
-    #[cfg(feature = "blocking")]
-    fn exec_wrap_block<W>(&self, client: &impl BlockingClient) -> Result<Option<W>, ClientError>
+    pub fn parse(&self) -> Result<T, ClientError> {
+        match self.ty {
+            ResponseType::JSON => serde_json::from_slice(self.response.body()).map_err(|e| {
+                ClientError::ResponseParseError {
+                    source: e.into(),
+                    content: String::from_utf8(self.response.body().to_vec()).ok(),
+                }
+            }),
+        }
+    }
+
+    pub fn raw(&self) -> Vec<u8> {
+        self.response.body().clone()
+    }
+
+    pub fn wrap<W>(&self) -> Result<W, ClientError>
     where
-        W: Wrapper<Value = Self::Response>,
+        W: Wrapper<Value = T>,
     {
-        log::info!("Executing endpoint");
-
-        let req = self.request(client.base())?;
-        let resp = exec_block(client, req)?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
-    }
-
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the deserialized [Endpoint::Response] wrapped in a [Wrapper].
-    #[cfg(feature = "blocking")]
-    fn exec_wrap_mut_block<W>(
-        &self,
-        client: &impl BlockingClient,
-        middle: &impl MiddleWare,
-    ) -> Result<Option<W>, ClientError>
-    where
-        W: Wrapper<Value = Self::Response>,
-    {
-        log::info!("Executing endpoint");
-
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut_block(client, self, req, middle)?;
-        crate::http::parse(Self::RESPONSE_BODY_TYPE, resp.body())
-    }
-
-    /// Executes the Endpoint using the given [Client], returning the raw
-    /// response as a byte array.
-    #[cfg(feature = "blocking")]
-    fn exec_raw_block(&self, client: &impl BlockingClient) -> Result<Bytes, ClientError> {
-        log::info!("Executing endpoint");
-
-        let req = self.request(client.base())?;
-        let resp = exec_block(client, req)?;
-        Ok(resp.body().clone())
-    }
-
-    /// Executes the Endpoint using the given [Client] and [MiddleWare],
-    /// returning the raw response as a byte array.
-    #[cfg(feature = "blocking")]
-    fn exec_raw_mut_block(
-        &self,
-        client: &impl BlockingClient,
-        middle: &impl MiddleWare,
-    ) -> Result<Bytes, ClientError> {
-        log::info!("Executing endpoint");
-
-        let req = self.request_mut(client.base(), middle)?;
-        let resp = exec_mut_block(client, self, req, middle)?;
-        Ok(resp.body().clone())
+        match self.ty {
+            ResponseType::JSON => serde_json::from_slice(self.response.body()).map_err(|e| {
+                ClientError::ResponseParseError {
+                    source: e.into(),
+                    content: String::from_utf8(self.response.body().to_vec()).ok(),
+                }
+            }),
+        }
     }
 }
 
@@ -320,11 +284,14 @@ pub trait MiddleWare: Sync + Send {
     fn response<E: Endpoint>(
         &self,
         endpoint: &E,
-        resp: &mut Response<Bytes>,
+        resp: &mut Response<Vec<u8>>,
     ) -> Result<(), ClientError>;
 }
 
-async fn exec(client: &impl Client, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+async fn exec(
+    client: &impl Client,
+    req: Request<Vec<u8>>,
+) -> Result<Response<Vec<u8>>, ClientError> {
     client.execute(req).await
 }
 
@@ -333,7 +300,7 @@ async fn exec_mut(
     endpoint: &impl Endpoint,
     req: Request<Vec<u8>>,
     middle: &impl MiddleWare,
-) -> Result<Response<Bytes>, ClientError> {
+) -> Result<Response<Vec<u8>>, ClientError> {
     let mut resp = client.execute(req).await?;
     middle.response(endpoint, &mut resp)?;
     Ok(resp)
@@ -343,18 +310,6 @@ async fn exec_mut(
 fn exec_block(
     client: &impl BlockingClient,
     req: Request<Vec<u8>>,
-) -> Result<Response<Bytes>, ClientError> {
+) -> Result<Response<Vec<u8>>, ClientError> {
     client.execute(req)
-}
-
-#[cfg(feature = "blocking")]
-fn exec_mut_block(
-    client: &impl BlockingClient,
-    endpoint: &impl Endpoint,
-    req: Request<Vec<u8>>,
-    middle: &impl MiddleWare,
-) -> Result<Response<Bytes>, ClientError> {
-    let mut resp = client.execute(req)?;
-    middle.response(endpoint, &mut resp)?;
-    Ok(resp)
 }

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use bytes::Bytes;
 use derive_builder::Builder;
 use rustify::{errors::ClientError, Client, Endpoint, MiddleWare};
 use rustify_derive::Endpoint;
@@ -80,7 +79,7 @@ impl MiddleWare for Middle {
     fn response<E: Endpoint>(
         &self,
         _: &E,
-        _: &mut http::Response<Bytes>,
+        _: &mut http::Response<Vec<u8>>,
     ) -> Result<(), ClientError> {
         Ok(())
     }
@@ -100,13 +99,16 @@ async fn main() {
 
     // Here we use `exec_mut` which allows us to pass the Wrapper we created
     // earlier for mutating our outgoing requests.
+    let name = endpoint.name.clone();
     let result = endpoint
-        .exec_mut(&client, &Middle {})
+        .with_middleware(&Middle {})
+        .exec(&client)
         .await
         .unwrap()
+        .parse()
         .unwrap();
     println!(
         "Created user {} with ID {} at {}",
-        endpoint.name, result.id, result.created_at
+        name, result.id, result.created_at
     );
 }

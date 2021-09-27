@@ -1,7 +1,6 @@
 //! Contains the blocking [Client] trait for executing
 //! [Endpoints][crate::endpoint::Endpoint].
 use crate::{client::HTTP_SUCCESS_CODES, errors::ClientError};
-use bytes::Bytes;
 use http::{Request, Response};
 
 /// Represents an HTTP client which is capable of executing
@@ -10,7 +9,7 @@ use http::{Request, Response};
 pub trait Client {
     /// Sends the given [Request] and returns a [Response]. Implementations
     /// should consolidate all errors into the [ClientError] type.
-    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError>;
+    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError>;
 
     /// Returns the base URL the client is configured with. This is used for
     /// creating the fully qualified URLs used when executing
@@ -19,7 +18,7 @@ pub trait Client {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
-    fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+    fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         log::info!(
             "Client sending {} request to {} with {} bytes of data",
             req.method().to_string(),

@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use httpmock::prelude::*;
 #[cfg(feature = "blocking")]
 use rustify::blocking::clients::reqwest::Client as ReqwestBlocking;
@@ -69,7 +68,7 @@ pub struct TestGenericWrapper<T> {
     pub result: T,
 }
 
-impl<T: DeserializeOwned> Wrapper for TestGenericWrapper<T> {
+impl<T: DeserializeOwned + Send + Sync> Wrapper for TestGenericWrapper<T> {
     type Value = T;
 }
 
@@ -88,7 +87,7 @@ impl MiddleWare for Middle {
     fn response<E: Endpoint>(
         &self,
         _: &E,
-        resp: &mut http::Response<Bytes>,
+        resp: &mut http::Response<Vec<u8>>,
     ) -> Result<(), ClientError> {
         let resp_body = resp.body().clone();
         let wrapper: TestWrapper =
@@ -97,7 +96,7 @@ impl MiddleWare for Middle {
                 content: String::from_utf8(resp_body.to_vec()).ok(),
             })?;
         let data = wrapper.result.to_string();
-        *resp.body_mut() = bytes::Bytes::from(data);
+        *resp.body_mut() = data.as_bytes().to_vec();
         Ok(())
     }
 }
