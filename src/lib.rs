@@ -217,6 +217,9 @@
 //!
 //! [1]: https://github.com/jmgilman/rustify/issues
 
+#[macro_use]
+extern crate tracing;
+
 #[cfg(feature = "blocking")]
 pub mod blocking;
 pub mod client;
