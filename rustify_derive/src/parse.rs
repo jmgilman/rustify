@@ -181,14 +181,28 @@ pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
             let id = f.ident.clone().unwrap();
             let ty = &f.ty;
 
+            // Pass serde attributes onto our temporary struct
+            let mut attrs = Vec::<&Attribute>::new();
+            if !f.attrs.is_empty() {
+                for attr in &f.attrs {
+                    if attr.path.is_ident("serde") {
+                        attrs.push(attr);
+                    }
+                }
+            }
+
             // If this field is an Option, don't serialize when it's None
             if is_std_option(ty) {
                 quote! {
+                    #(#attrs)*
                     #[serde(skip_serializing_if = "Option::is_none")]
                     #id: &'a #ty,
                 }
             } else {
-                quote! { #id: &'a #ty, }
+                quote! {
+                    #(#attrs)*
+                    #id: &'a #ty,
+                }
             }
         })
         .collect::<Vec<proc_macro2::TokenStream>>();

@@ -7,7 +7,7 @@ use derive_builder::Builder;
 use httpmock::prelude::*;
 use rustify::endpoint::Endpoint;
 use rustify_derive::Endpoint;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 //use std::marker::PhantomData;
 use test_env_log::test;
@@ -102,20 +102,21 @@ async fn test_path_with_format() {
 
 #[test(tokio::test)]
 async fn test_data() {
-    #[derive(Endpoint)]
+    #[derive(Endpoint, Serialize)]
     #[endpoint(path = "test/path", method = "POST")]
     struct Test {
-        name: String,
+        #[serde(rename = "type")]
+        ty: String,
     }
 
     let t = TestServer::default();
     let e = Test {
-        name: "test".to_string(),
+        ty: "test".to_string(),
     };
     let m = t.server.mock(|when, then| {
         when.method(POST)
             .path("/test/path")
-            .json_body(json!({ "name": "test" }));
+            .json_body(json!({ "type": "test" }));
         then.status(200);
     });
     let r = e.exec(&t.client).await;
