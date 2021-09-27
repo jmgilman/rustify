@@ -3,7 +3,6 @@
 //! [reqwest](https://docs.rs/reqwest/) crate.
 
 use crate::{blocking::client::Client as RustifyClient, errors::ClientError};
-use bytes::Bytes;
 use http::{Request, Response};
 use std::convert::TryFrom;
 
@@ -38,7 +37,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Creates a new instance of [Client] using the provided parameters
+    /// Creates a new instance of [Client] using the provided parameters.
     pub fn new(base: &str, http: reqwest::blocking::Client) -> Self {
         Client {
             base: base.to_string(),
@@ -63,7 +62,7 @@ impl RustifyClient for Client {
         self.base.as_str()
     }
 
-    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+    fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         let request = reqwest::blocking::Request::try_from(req)
             .map_err(|e| ClientError::ReqwestBuildError { source: e })?;
 
@@ -88,7 +87,8 @@ impl RustifyClient for Client {
             .body(
                 response
                     .bytes()
-                    .map_err(|e| ClientError::ResponseError { source: e.into() })?,
+                    .map_err(|e| ClientError::ResponseError { source: e.into() })?
+                    .to_vec(),
             )
             .map_err(|e| ClientError::ResponseError { source: e.into() })
     }

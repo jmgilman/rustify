@@ -3,7 +3,6 @@
 
 use crate::{client::Client as RustifyClient, errors::ClientError};
 use async_trait::async_trait;
-use bytes::Bytes;
 use http::{Request, Response};
 use std::convert::TryFrom;
 
@@ -40,7 +39,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Creates a new instance of [Client] using the provided parameters
+    /// Creates a new instance of [Client] using the provided parameters.
     pub fn new(base: &str, http: reqwest::Client) -> Self {
         Client {
             base: base.to_string(),
@@ -66,7 +65,7 @@ impl RustifyClient for Client {
         self.base.as_str()
     }
 
-    async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Bytes>, ClientError> {
+    async fn send(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         let request = reqwest::Request::try_from(req)
             .map_err(|e| ClientError::ReqwestBuildError { source: e })?;
 
@@ -88,12 +87,14 @@ impl RustifyClient for Client {
         for v in response.headers().into_iter() {
             headers.append::<http::header::HeaderName>(v.0.into(), v.1.into());
         }
+
         http_resp
             .body(
                 response
                     .bytes()
                     .await
-                    .map_err(|e| ClientError::ResponseError { source: e.into() })?,
+                    .map_err(|e| ClientError::ResponseError { source: e.into() })?
+                    .to_vec(),
             )
             .map_err(|e| ClientError::ResponseError { source: e.into() })
     }

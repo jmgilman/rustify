@@ -1,11 +1,11 @@
 //! Contains helper functions for working with HTTP requests and responses.
 
 use crate::{
-    enums::{RequestMethod, RequestType, ResponseType},
+    enums::{RequestMethod, RequestType},
     errors::ClientError,
 };
 use http::{Request, Uri};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Serialize;
 use url::Url;
 
 /// Builds a request body by serializing an object using a serializer determined
@@ -24,13 +24,13 @@ pub fn build_body(object: &impl Serialize, ty: RequestType) -> Result<Vec<u8>, C
     }
 }
 
-/// Builds a query string by serializing an object
+/// Builds a query string by serializing an object.
 pub fn build_query(object: &impl Serialize) -> Result<String, ClientError> {
     serde_urlencoded::to_string(object)
         .map_err(|e| ClientError::UrlQueryParseError { source: e.into() })
 }
 
-/// Builds a [Request] using the given [Endpoint] and base URL
+/// Builds a [Request] using the given [Endpoint][crate::Endpoint] and base URL.
 pub fn build_request(
     base: &str,
     path: &str,
@@ -53,8 +53,8 @@ pub fn build_request(
         })
 }
 
-/// Combines the given base URL with the relative URL path from this
-/// Endpoint to create a fully qualified URL.
+/// Combines the given base URL, relative path, and optional query parameters
+/// into a single [Uri].
 pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, ClientError> {
     log::info!(
         "Building endpoint url from {} base URL and {} action",
@@ -71,21 +71,4 @@ pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, C
     url.to_string()
         .parse::<Uri>()
         .map_err(|e| ClientError::UrlBuildError { source: e })
-}
-
-/// Parses a response body into the [Endpoint::Response], choosing a deserializer
-/// based on [Endpoint::RESPONSE_BODY_TYPE].
-pub fn parse<T: DeserializeOwned>(ty: ResponseType, body: &[u8]) -> Result<Option<T>, ClientError> {
-    if body.is_empty() {
-        return Ok(None);
-    }
-
-    match ty {
-        ResponseType::JSON => {
-            serde_json::from_slice(body).map_err(|e| ClientError::ResponseParseError {
-                source: e.into(),
-                content: String::from_utf8(body.to_vec()).ok(),
-            })
-        }
-    }
 }
