@@ -39,7 +39,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Creates a new instance of [Client] using the provided parameters
+    /// Creates a new instance of [Client] using the provided parameters.
     pub fn new(base: &str, http: reqwest::Client) -> Self {
         Client {
             base: base.to_string(),
