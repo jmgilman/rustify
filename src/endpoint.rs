@@ -68,17 +68,33 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
         self.endpoint.body()
     }
 
+    #[instrument(skip(self), err)]
     fn url(&self, base: &str) -> Result<http::Uri, ClientError> {
         self.endpoint.url(base)
     }
 
+    #[instrument(skip(self), err)]
+    fn request(&self, base: &str) -> Result<Request<Vec<u8>>, ClientError> {
+        let mut req = crate::http::build_request(
+            base,
+            &self.path(),
+            self.method(),
+            self.query()?,
+            self.body()?,
+        )?;
+
+        self.middleware.request(self, &mut req)?;
+        Ok(req)
+    }
+
+    #[instrument(skip(self, client), err)]
     async fn exec(
         &self,
         client: &impl Client,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
+        info!("Executing endpoint");
 
-        let req = self.request_mut(client.base(), self.middleware)?;
+        let req = self.request(client.base())?;
         let resp = exec_mut(client, self, req, self.middleware).await?;
         Ok(EndpointResult::new(resp, Self::RESPONSE_BODY_TYPE))
     }
@@ -88,7 +104,7 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
         &self,
         client: &impl BlockingClient,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
+        info!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec_block_mut(client, self, req, self.middleware)?;
@@ -186,12 +202,14 @@ pub trait Endpoint: Send + Sync + Sized {
     }
 
     /// Returns the full URL address of the endpoint using the base address.
+    #[instrument(skip(self), err)]
     fn url(&self, base: &str) -> Result<http::Uri, ClientError> {
         crate::http::build_url(base, &self.path(), self.query()?)
     }
 
     /// Returns a [Request] containing all data necessary to execute against
     /// this endpoint.
+    #[instrument(skip(self), err)]
     fn request(&self, base: &str) -> Result<Request<Vec<u8>>, ClientError> {
         crate::http::build_request(
             base,
@@ -202,31 +220,13 @@ pub trait Endpoint: Send + Sync + Sized {
         )
     }
 
-    /// Returns a [Request] containing all data necessary to execute against
-    /// this endpoint and which has been potentially modified by [MiddleWare].
-    fn request_mut(
-        &self,
-        base: &str,
-        middle: &impl MiddleWare,
-    ) -> Result<Request<Vec<u8>>, ClientError> {
-        let mut req = crate::http::build_request(
-            base,
-            &self.path(),
-            self.method(),
-            self.query()?,
-            self.body()?,
-        )?;
-
-        middle.request(self, &mut req)?;
-        Ok(req)
-    }
-
     /// Executes the Endpoint using the given [Client].
+    #[instrument(skip(self, client), err)]
     async fn exec(
         &self,
         client: &impl Client,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
+        info!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
@@ -239,11 +239,12 @@ pub trait Endpoint: Send + Sync + Sized {
 
     /// Executes the Endpoint using the given [Client].
     #[cfg(feature = "blocking")]
+    #[instrument(skip(self, client), err)]
     fn exec_block(
         &self,
         client: &impl BlockingClient,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        log::info!("Executing endpoint");
+        info!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec_block(client, req)?;
@@ -274,6 +275,7 @@ impl<T: DeserializeOwned + Send + Sync> EndpointResult<T> {
     }
 
     /// Parses the response into the final result type.
+    #[instrument(skip(self), err)]
     pub fn parse(&self) -> Result<T, ClientError> {
         match self.ty {
             ResponseType::JSON => serde_json::from_slice(self.response.body()).map_err(|e| {
@@ -292,6 +294,7 @@ impl<T: DeserializeOwned + Send + Sync> EndpointResult<T> {
 
     /// Parses the response into the final result type and then wraps it in the
     /// given [Wrapper].
+    #[instrument(skip(self), err)]
     pub fn wrap<W>(&self) -> Result<W, ClientError>
     where
         W: Wrapper<Value = T>,
