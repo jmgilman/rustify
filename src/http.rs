@@ -10,6 +10,7 @@ use url::Url;
 
 /// Builds a request body by serializing an object using a serializer determined
 /// by the [RequestType].
+#[instrument(skip(object), err)]
 pub fn build_body(object: &impl Serialize, ty: RequestType) -> Result<Vec<u8>, ClientError> {
     match ty {
         RequestType::JSON => {
@@ -25,12 +26,14 @@ pub fn build_body(object: &impl Serialize, ty: RequestType) -> Result<Vec<u8>, C
 }
 
 /// Builds a query string by serializing an object.
+#[instrument(skip(object), err)]
 pub fn build_query(object: &impl Serialize) -> Result<String, ClientError> {
     serde_urlencoded::to_string(object)
         .map_err(|e| ClientError::UrlQueryParseError { source: e.into() })
 }
 
 /// Builds a [Request] using the given [Endpoint][crate::Endpoint] and base URL.
+#[instrument(skip(query, data), err)]
 pub fn build_request(
     base: &str,
     path: &str,
@@ -55,11 +58,11 @@ pub fn build_request(
 
 /// Combines the given base URL, relative path, and optional query parameters
 /// into a single [Uri].
+#[instrument(skip(query), err)]
 pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, ClientError> {
-    log::info!(
+    info!(
         "Building endpoint url from {} base URL and {} action",
-        base,
-        path,
+        base, path,
     );
 
     let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError { source: e })?;

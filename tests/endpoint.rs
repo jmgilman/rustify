@@ -10,8 +10,9 @@ use rustify_derive::Endpoint;
 use serde::Deserialize;
 use serde_json::json;
 //use std::marker::PhantomData;
+use test_env_log::test;
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_path() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path")]
@@ -29,7 +30,7 @@ async fn test_path() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_method() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", method = "POST")]
@@ -47,7 +48,7 @@ async fn test_method() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_query() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", method = "POST")]
@@ -76,7 +77,7 @@ async fn test_query() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_path_with_format() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
@@ -99,7 +100,7 @@ async fn test_path_with_format() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_data() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", method = "POST")]
@@ -123,7 +124,7 @@ async fn test_data() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_raw_data() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path/{self.name}", method = "POST")]
@@ -151,7 +152,7 @@ async fn test_raw_data() {
     assert!(r.is_ok())
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_result() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", response = "TestResponse")]
@@ -175,7 +176,7 @@ async fn test_result() {
     assert_eq!(r.unwrap().parse().unwrap().age, 30);
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_builder() {
     #[derive(Builder, Endpoint)]
     #[endpoint(path = "test/path", method = "POST", builder = "true")]
@@ -200,7 +201,7 @@ async fn test_builder() {
     assert!(r.is_ok());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_mutate() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", response = "TestResponse")]
@@ -221,7 +222,7 @@ async fn test_mutate() {
     assert_eq!(r.unwrap().parse().unwrap().age, 30);
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_wrapper() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", response = "TestResponse")]
@@ -244,7 +245,7 @@ async fn test_wrapper() {
     assert_eq!(r.age, 30);
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_raw_response() {
     #[derive(Endpoint)]
     #[endpoint(path = "test/path", response = "TestResponse")]
@@ -264,7 +265,7 @@ async fn test_raw_response() {
     assert_eq!(r.unwrap().raw(), resp_data.to_string().as_bytes());
 }
 
-// #[tokio::test]
+// #[test(tokio::test)]
 // async fn test_generic() {
 //     #[skip_serializing_none]
 //     #[derive(Builder, Debug, Endpoint, Serialize)]
@@ -311,7 +312,7 @@ async fn test_raw_response() {
 //     assert_eq!(r.unwrap().unwrap().data.age, 30);
 // }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_complex() {
     #[derive(Builder, Default, Endpoint)]
     #[endpoint(
