@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2021-09-27
+
+### Changed
+- Breaking: Raw data tag changed from `#[data]` to `#[raw]`
+- Breaking: `skip_serializing_none` functionality integrated into the macro and
+  will now conflict if the attribute is present.
+- Breaking: `#[serde(skip)]` must be replaced with `#[endpoint(skip)]`
+- Breaking: All `exec_*` functions have been removed. Using `MiddleWare` is now
+  done by calling `.with_middleware()` on the endpoint, wrapping is done by 
+  calling `.wrap()` on the endpoint result, and getting a raw response can be
+  gotten from calling `.raw()` on the endpoint result.
+- Breaking: Endpoint responses must now be thread safe (`Send + Sync`).
+- Breaking: Requests and responses from endpoint executions now use a `Vec<u8>` 
+  as the backing type for holding the raw body data. This is a change from 
+  `bytes::Bytes`.
+- The `log` functionality was replaced with `tracing` and tracing was added to
+  many of the crate functions. The `tracing` crate has the `log` feature enabled
+  to enable backwards compatability. 
+- The `Endpoint` trait no longer forces deriving of `Serialize`. 
+
+### Fixed
+- Due to a design bug, query parameters of type `Option<T>` would still
+  serialize if the value was `None`. The redesign associated with this version
+  has resolved this issue and query parameters now share the same behavior as
+  body data.
+
 ## [0.4.4] - 2021-09-11
 
 ### Changed
@@ -101,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.4.4...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.4.4]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.4.3]: https://github.com/jmgilman/rustify/releases/tag/v0.4.3
 [0.4.2]: https://github.com/jmgilman/rustify/releases/tag/v0.4.2
