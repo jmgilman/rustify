@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `bytes::Bytes`.
 - The `log` functionality was replaced with `tracing` and tracing was added to
   many of the crate functions. The `tracing` crate has the `log` feature enabled
-  to enable backwards compatability. 
+  to enable backwards compatibility. 
 - The `Endpoint` trait no longer forces deriving of `Serialize`. 
 
 ### Fixed
