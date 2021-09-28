@@ -7,9 +7,9 @@ use derive_builder::Builder;
 use httpmock::prelude::*;
 use rustify::endpoint::Endpoint;
 use rustify_derive::Endpoint;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-//use std::marker::PhantomData;
+use std::marker::PhantomData;
 use test_env_log::test;
 
 #[test(tokio::test)]
@@ -266,52 +266,49 @@ async fn test_raw_response() {
     assert_eq!(r.unwrap().raw(), resp_data.to_string().as_bytes());
 }
 
-// #[test(tokio::test)]
-// async fn test_generic() {
-//     #[skip_serializing_none]
-//     #[derive(Builder, Debug, Endpoint, Serialize)]
-//     #[endpoint(path = "test/path/{self.name}", response = "TestResponse<T>")]
-//     #[builder(setter(into, strip_option))]
-//     struct Test<T: DeserializeOwned + Serialize + Debug + Send + Sync> {
-//         #[serde(skip)]
-//         name: String,
-//         #[serde(skip)]
-//         #[builder(default = "None", setter(skip))]
-//         data: Option<PhantomData<T>>,
-//     }
+#[test(tokio::test)]
+async fn test_generic() {
+    #[derive(Builder, Debug, Endpoint)]
+    #[endpoint(path = "test/path/{self.name}", response = "TestResponse<T>")]
+    #[builder(setter(into))]
+    struct Test<T: DeserializeOwned + Serialize + Debug + Send + Sync> {
+        #[endpoint(skip)]
+        name: String,
+        #[endpoint(skip)]
+        #[builder(default = "None", setter(skip))]
+        data: Option<PhantomData<T>>,
+    }
 
-//     #[derive(Clone, Debug, Serialize, Deserialize)]
-//     struct TestData {
-//         age: u8,
-//     }
+    #[derive(Clone, Debug, Serialize, Deserialize)]
+    struct TestData {
+        age: u8,
+    }
 
-//     #[derive(Debug, Serialize, Deserialize)]
-//     struct TestResponse<T> {
-//         data: T,
-//         version: u8,
-//     }
+    #[derive(Debug, Serialize, Deserialize)]
+    struct TestResponse<T> {
+        data: T,
+        version: u8,
+    }
 
-//     #[derive(Debug, Deserialize)]
-//     struct TestWrapper<T> {
-//         result: T,
-//     }
-
-//     let t = TestServer::default();
-//     let m = t.server.mock(|when, then| {
-//         when.method(GET).path("/test/path/test");
-//         then.status(200)
-//             .json_body(json!({"result": {"data": {"age": 30}, "version": 1}}));
-//     });
-//     let r: Result<Option<TestResponse<TestData>>, ClientError> = TestBuilder::default()
-//         .name("test")
-//         .build()
-//         .unwrap()
-//         .exec_mut(&t.client, &Middle {})
-//         .await;
-//     m.assert();
-//     assert!(r.is_ok());
-//     assert_eq!(r.unwrap().unwrap().data.age, 30);
-// }
+    let t = TestServer::default();
+    let m = t.server.mock(|when, then| {
+        when.method(GET).path("/test/path/test");
+        then.status(200)
+            .json_body(json!({"result": {"data": {"age": 30}, "version": 1}}));
+    });
+    let r: TestResponse<TestData> = TestBuilder::default()
+        .name("test")
+        .build()
+        .unwrap()
+        .with_middleware(&Middle {})
+        .exec(&t.client)
+        .await
+        .unwrap()
+        .parse()
+        .unwrap();
+    m.assert();
+    assert_eq!(r.data.age, 30);
+}
 
 #[test(tokio::test)]
 async fn test_complex() {
