@@ -110,7 +110,7 @@ fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 /// generated.
 fn gen_query(
     fields: &HashMap<EndpointAttribute, Vec<Field>>,
-    serde_attrs: &Vec<Meta>,
+    serde_attrs: &[Meta],
 ) -> proc_macro2::TokenStream {
     let query_fields = fields.get(&EndpointAttribute::Query);
     if let Some(v) = query_fields {
@@ -146,7 +146,7 @@ fn gen_query(
 /// * If none of the above is true, the body method is not generated.
 fn gen_body(
     fields: &HashMap<EndpointAttribute, Vec<Field>>,
-    serde_attrs: &Vec<Meta>,
+    serde_attrs: &[Meta],
 ) -> Result<proc_macro2::TokenStream, Error> {
     // Check for a raw field first
     if let Some(v) = fields.get(&EndpointAttribute::Raw) {

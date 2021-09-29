@@ -173,7 +173,7 @@ pub(crate) fn field_attributes(
 /// The result is a [proc_macro2::TokenStream] that contains the new struct and
 /// and it's instantiation. The instantiated variable can be accessed by it's
 /// static name of `__temp`.
-pub(crate) fn fields_to_struct(fields: &[Field], attrs: &Vec<Meta>) -> proc_macro2::TokenStream {
+pub(crate) fn fields_to_struct(fields: &[Field], attrs: &[Meta]) -> proc_macro2::TokenStream {
     // Construct struct field definitions
     let def = fields
         .iter()
