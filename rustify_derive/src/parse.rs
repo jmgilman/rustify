@@ -92,11 +92,11 @@ pub(crate) fn to_map(values: &[MetaNameValue]) -> Result<HashMap<Ident, LitStr>,
 }
 
 /// Searches a list of [Attribute]'s and returns any matching [crate::ATTR_NAME].
-pub(crate) fn attributes(attrs: &[Attribute]) -> Result<Vec<Meta>, Error> {
+pub(crate) fn attributes(attrs: &[Attribute], name: &str) -> Result<Vec<Meta>, Error> {
     let mut result = Vec::<Meta>::new();
     for attr in attrs.iter() {
         let meta = attr.parse_meta().map_err(Error::from)?;
-        match meta.path().is_ident(crate::ATTR_NAME) {
+        match meta.path().is_ident(name) {
             true => {
                 result.push(meta);
             }
@@ -119,7 +119,7 @@ pub(crate) fn field_attributes(
     if let syn::Data::Struct(data) = data {
         for field in data.fields.iter() {
             // Collect all `endpoint` attributes attached to this field
-            let attrs = attributes(&field.attrs)?;
+            let attrs = attributes(&field.attrs, crate::ATTR_NAME)?;
 
             // Add field as untagged is no attributes were found
             if attrs.is_empty() {
@@ -173,7 +173,7 @@ pub(crate) fn field_attributes(
 /// The result is a [proc_macro2::TokenStream] that contains the new struct and
 /// and it's instantiation. The instantiated variable can be accessed by it's
 /// static name of `__temp`.
-pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
+pub(crate) fn fields_to_struct(fields: &[Field], attrs: &Vec<Meta>) -> proc_macro2::TokenStream {
     // Construct struct field definitions
     let def = fields
         .iter()
@@ -206,6 +206,10 @@ pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
             }
         })
         .collect::<Vec<proc_macro2::TokenStream>>();
+    let attrs = attrs
+        .iter()
+        .map(|m| quote! { #[#m]})
+        .collect::<Vec<proc_macro2::TokenStream>>();
 
     // Construct struct instantiation
     let inst = fields
@@ -218,6 +222,7 @@ pub(crate) fn fields_to_struct(fields: &[Field]) -> proc_macro2::TokenStream {
 
     quote! {
         #[derive(Serialize)]
+        #(#attrs)*
         struct __Temp<'a> {
             #(#def)*
         }

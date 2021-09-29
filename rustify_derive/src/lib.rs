@@ -108,11 +108,14 @@ fn gen_path(path: &syn::LitStr) -> Result<proc_macro2::TokenStream, Error> {
 /// are combined into a new struct and then serialized into a query string. If
 /// the attribute is not found on any of the fields the query method is not
 /// generated.
-fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::TokenStream {
+fn gen_query(
+    fields: &HashMap<EndpointAttribute, Vec<Field>>,
+    serde_attrs: &Vec<Meta>,
+) -> proc_macro2::TokenStream {
     let query_fields = fields.get(&EndpointAttribute::Query);
     if let Some(v) = query_fields {
         // Construct query function
-        let temp = parse::fields_to_struct(v);
+        let temp = parse::fields_to_struct(v, serde_attrs);
         quote! {
             fn query(&self) -> Result<Option<String>, ClientError> {
                 #temp
@@ -143,6 +146,7 @@ fn gen_query(fields: &HashMap<EndpointAttribute, Vec<Field>>) -> proc_macro2::To
 /// * If none of the above is true, the body method is not generated.
 fn gen_body(
     fields: &HashMap<EndpointAttribute, Vec<Field>>,
+    serde_attrs: &Vec<Meta>,
 ) -> Result<proc_macro2::TokenStream, Error> {
     // Check for a raw field first
     if let Some(v) = fields.get(&EndpointAttribute::Raw) {
@@ -158,7 +162,7 @@ fn gen_body(
         })
     // Then for any body fields
     } else if let Some(v) = fields.get(&EndpointAttribute::Body) {
-        let temp = parse::fields_to_struct(v);
+        let temp = parse::fields_to_struct(v, serde_attrs);
         Ok(quote! {
             fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
                 #temp
@@ -168,7 +172,7 @@ fn gen_body(
         })
     // Then for any untagged fields
     } else if let Some(v) = fields.get(&EndpointAttribute::Untagged) {
-        let temp = parse::fields_to_struct(v);
+        let temp = parse::fields_to_struct(v, serde_attrs);
         Ok(quote! {
             fn body(&self) -> Result<Option<Vec<u8>>, ClientError> {
                 #temp
@@ -220,7 +224,7 @@ fn parse_params(attr: &Meta) -> Result<Parameters, Error> {
 /// Implements `Endpoint` on the provided struct.
 fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     // Parse `endpoint` attributes attached to input struct
-    let attrs = match parse::attributes(&s.ast().attrs) {
+    let attrs = match parse::attributes(&s.ast().attrs, ATTR_NAME) {
         Ok(v) => v,
         Err(e) => return e.into_tokens(),
     };
@@ -266,6 +270,14 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let response_type = params.response_type;
     let id = &s.ast().ident;
 
+    // Find serde attributes
+    let serde_attrs = parse::attributes(&s.ast().attrs, "serde");
+    let serde_attrs = if let Ok(v) = serde_attrs {
+        v
+    } else {
+        Vec::<Meta>::new()
+    };
+
     // Generate path string
     let path = match gen_path(&path) {
         Ok(a) => a,
@@ -273,10 +285,10 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     };
 
     // Generate query function
-    let query = gen_query(&field_attrs);
+    let query = gen_query(&field_attrs, &serde_attrs);
 
     // Generate body function
-    let body = match gen_body(&field_attrs) {
+    let body = match gen_body(&field_attrs, &serde_attrs) {
         Ok(d) => d,
         Err(e) => return e.into_tokens(),
     };
