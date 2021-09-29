@@ -83,10 +83,9 @@ impl RustifyClient for Client {
             })?;
 
         let status_code = response.status().as_u16();
-        let mut headers = http::header::HeaderMap::new();
-        let http_resp = http::Response::builder().status(status_code);
+        let mut http_resp = http::Response::builder().status(status_code);
         for v in response.headers().into_iter() {
-            headers.append::<http::header::HeaderName>(v.0.into(), v.1.into());
+            http_resp = http_resp.header(v.0, v.1);
         }
 
         http_resp
