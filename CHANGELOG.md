@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2021-09-28
+
+### Fixed
+- Fixes a bug where response headers were not being properly returned
+
 ## [0.5.0] - 2021-09-27
 
 ### Changed
@@ -127,7 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.5.0]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.4.4]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.4.3]: https://github.com/jmgilman/rustify/releases/tag/v0.4.3
