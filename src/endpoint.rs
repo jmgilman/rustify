@@ -92,7 +92,7 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
         &self,
         client: &impl Client,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        info!("Executing endpoint");
+        debug!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec_mut(client, self, req, self.middleware).await?;
@@ -104,7 +104,7 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
         &self,
         client: &impl BlockingClient,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        info!("Executing endpoint");
+        debug!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec_block_mut(client, self, req, self.middleware)?;
@@ -226,7 +226,7 @@ pub trait Endpoint: Send + Sync + Sized {
         &self,
         client: &impl Client,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        info!("Executing endpoint");
+        debug!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec(client, req).await?;
@@ -244,7 +244,7 @@ pub trait Endpoint: Send + Sync + Sized {
         &self,
         client: &impl BlockingClient,
     ) -> Result<EndpointResult<Self::Response>, ClientError> {
-        info!("Executing endpoint");
+        debug!("Executing endpoint");
 
         let req = self.request(client.base())?;
         let resp = exec_block(client, req)?;
