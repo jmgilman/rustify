@@ -18,11 +18,11 @@ Rustify is a small library written in Rust which eases the burden of
 scaffolding HTTP APIs. It provides an `Endpoint` trait along with a macro helper
 which allows templating various remote endpoints. Both asynchronous and
 synchrounous clients are offered for executing requests against endpoints with
-the option of implementing custom clients using the `Client` trait. 
+the option of implementing custom clients using the `Client` trait.
 
-Rustify provides support for serializing requests and deserializing responses. 
-Raw requests and responses in the form of bytes are also supported. The library 
-also contains many helpers for dealing with requests like support for middleware 
+Rustify provides support for serializing requests and deserializing responses.
+Raw requests and responses in the form of bytes are also supported. The library
+also contains many helpers for dealing with requests like support for middleware
 and wrapping API responses.
 
 ## Installation
@@ -31,7 +31,7 @@ Add rustify as a dependency to your cargo.toml:
 
 ```toml
 [dependencies]
-rustify = "0.5.2"
+rustify = "0.5.3"
 rustify_derive = "0.5.2"
 ```
 
@@ -56,7 +56,6 @@ let result = endpoint.exec(&client).await; // Sends GET request to http://api.co
 assert!(result.is_ok());
 ```
 
-
 ### Request Body
 
 ```rust
@@ -66,7 +65,7 @@ use rustify_derive::Endpoint;
 
 // Defines an API endpoint at /test/path/{name} that takes one input for
 // creating the url and two inputs for building the request body. The content
-// type of the request body defaults to JSON, however, it can be modified by 
+// type of the request body defaults to JSON, however, it can be modified by
 // passing the `request_type` parameter to the endpoint configuration.
 //
 // Note: The `#[endpoint(body)]` attribute tags are technically optional in the
@@ -86,7 +85,7 @@ struct Test {
 }
 
 // Setting `builder` to true creates a `builder()` method on our struct that
-// returns the TestBuilder type created by `derive_builder`. 
+// returns the TestBuilder type created by `derive_builder`.
 let endpoint = Test::builder()
         .name("jmgilman")
         .age(42)
@@ -170,7 +169,7 @@ dbg!(response.success);
 
 ## Examples
 
-You can find example usage in the [examples](examples) directory. They can 
+You can find example usage in the [examples](examples) directory. They can
 be run with cargo:
 
 ```
@@ -182,10 +181,11 @@ The [vaultrs](https://github.com/jmgilman/vaultrs) crate is built upon rustify
 and serves as as good reference.
 
 ## Features
+
 The following features are available for this crate:
 
 * `blocking`: Enables the blocking variants of `Client`s as well as the blocking
-   `exec()` functions in `Endpoint`s. 
+   `exec()` functions in `Endpoint`s.
 
 ## Error Handling
 
@@ -194,14 +194,14 @@ provided by the crate.
 
 ## Testing
 
-See the the [tests](tests) directory for tests. Run tests with `cargo test`. 
+See the the [tests](tests) directory for tests. Run tests with `cargo test`.
 
 ## Contributing
 
-Check out the [issues][1] for items needing attention or submit your own and 
+Check out the [issues][1] for items needing attention or submit your own and
 then:
 
-1. Fork it (https://github.com/jmgilman/rustify/fork)
+1. Fork it (<https://github.com/jmgilman/rustify/fork>)
 2. Create your feature branch (git checkout -b feature/fooBar)
 3. Commit your changes (git commit -am 'Add some fooBar')
 4. Push to the branch (git push origin feature/fooBar)

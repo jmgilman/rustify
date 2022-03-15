@@ -31,7 +31,7 @@
 //!
 //! ```ignore
 //! [dependencies]
-//! rustify = "0.5.2"
+//! rustify = "0.5.3"
 //! rustify_derive = "0.5.2"
 //! ```
 //!
@@ -165,7 +165,7 @@
 //!
 //! # tokio_test::block_on(async {
 //! let endpoint = Test {
-//!     file: b"contents".to_vec(),   
+//!     file: b"contents".to_vec(),
 //! };
 //! let client = Client::default("http://api.com");
 //! let result = endpoint.exec(&client).await;
