@@ -266,6 +266,7 @@ async fn test_raw_response() {
     assert_eq!(r.unwrap().raw(), resp_data.to_string().as_bytes());
 }
 
+#[allow(dead_code)]
 #[test(tokio::test)]
 async fn test_generic() {
     #[derive(Builder, Debug, Endpoint)]
