@@ -10,7 +10,7 @@ use rustify_derive::Endpoint;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use std::marker::PhantomData;
-use test_env_log::test;
+use test_log::test;
 
 #[test(tokio::test)]
 async fn test_path() {
@@ -266,6 +266,7 @@ async fn test_raw_response() {
     assert_eq!(r.unwrap().raw(), resp_data.to_string().as_bytes());
 }
 
+#[allow(dead_code)]
 #[test(tokio::test)]
 async fn test_generic() {
     #[derive(Builder, Debug, Endpoint)]

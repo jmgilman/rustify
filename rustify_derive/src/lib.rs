@@ -194,10 +194,9 @@ fn gen_body(
 /// the need to explicitly import it.
 fn gen_builder(id: &Ident, generics: &Generics) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let builder_id: syn::Type =
-        syn::parse_str(format!("{}Builder", id.to_string()).as_str()).unwrap();
+    let builder_id: syn::Type = syn::parse_str(format!("{}Builder", id).as_str()).unwrap();
     let builder_func: syn::Expr =
-        syn::parse_str(format!("{}Builder::default()", id.to_string()).as_str()).unwrap();
+        syn::parse_str(format!("{}Builder::default()", id).as_str()).unwrap();
 
     quote! {
         impl #impl_generics #id #ty_generics #where_clause {
@@ -303,7 +302,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let (impl_generics, ty_generics, where_clause) = s.ast().generics.split_for_impl();
 
     // Generate Endpoint implementation
-    let const_name = format!("_DERIVE_Endpoint_FOR_{}", id.to_string());
+    let const_name = format!("_DERIVE_Endpoint_FOR_{}", id);
     let const_ident = Ident::new(const_name.as_str(), Span::call_site());
     quote! {
         const #const_ident: () = {
