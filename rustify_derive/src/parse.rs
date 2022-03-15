@@ -136,7 +136,7 @@ pub(crate) fn field_attributes(
             // Combine all meta parameters from each attribute
             let attrs = attrs
                 .iter()
-                .map(|a| attr_list(a))
+                .map(attr_list)
                 .collect::<Result<Vec<Vec<Meta>>, Error>>()?;
 
             // Flatten and eliminate duplicates
