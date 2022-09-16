@@ -44,7 +44,6 @@ pub fn build_request(
     debug!("Building endpoint request");
     let uri = build_url(base, path, query)?;
 
-    let method_err = method.clone();
     let uri_err = uri.to_string();
     Request::builder()
         .uri(uri)
@@ -52,7 +51,7 @@ pub fn build_request(
         .body(data.unwrap_or_default())
         .map_err(|e| ClientError::RequestBuildError {
             source: e,
-            method: method_err,
+            method,
             url: uri_err,
         })
 }
