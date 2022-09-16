@@ -94,7 +94,7 @@ impl RustifyClient for Client {
                     .bytes()
                     .await
                     .map_err(|e| ClientError::ResponseError { source: e.into() })?
-                    .to_vec(),
+                    .into(),
             )
             .map_err(|e| ClientError::ResponseError { source: e.into() })
     }

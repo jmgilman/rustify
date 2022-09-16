@@ -96,7 +96,7 @@ impl MiddleWare for Middle {
                 content: String::from_utf8(resp_body.to_vec()).ok(),
             })?;
         let data = wrapper.result.to_string();
-        *resp.body_mut() = data.as_bytes().to_vec();
+        *resp.body_mut() = data.into();
         Ok(())
     }
 }
