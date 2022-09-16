@@ -222,17 +222,34 @@
 extern crate tracing;
 
 #[cfg(feature = "blocking")]
-pub mod blocking;
+pub mod blocking {
+    //! Contains blocking variants of clients for executing
+    //! [Endpoints][crate::endpoint::Endpoint]
+
+    pub mod client;
+    pub mod clients {
+        //! Contains implementations of [Client][crate::blocking::client::Client] which
+        //! use varying blocking HTTP clients.
+        #[cfg(feature = "reqwest")]
+        pub mod reqwest;
+    }
+}
 pub mod client;
-pub mod clients;
+pub mod clients {
+    //! Contains implementations of [Client][crate::client::Client] which use
+    //! varying HTTP clients.
+    #[cfg(feature = "reqwest")]
+    pub mod reqwest;
+}
 pub mod endpoint;
 pub mod enums;
 pub mod errors;
 pub mod http;
 
 #[doc(hidden)]
-#[path = "private/mod.rs"]
-pub mod __private;
+pub mod __private {
+    pub use serde;
+}
 
 pub use crate::{
     clients::reqwest::Client,
