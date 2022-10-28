@@ -337,4 +337,4 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     }
 }
 
-synstructure::decl_derive!([Endpoint, attributes(endpoint)] => endpoint_derive);
+synstructure::decl_derive!([Endpoint, attributes(endpoint, serde)] => endpoint_derive);
