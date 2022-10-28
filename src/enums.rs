@@ -1,5 +1,7 @@
 //! Contains common enums used across the crate
 
+use http::HeaderValue;
+
 /// Represents a HTTP request method
 #[derive(Clone, Debug)]
 pub enum RequestMethod {
@@ -37,6 +39,14 @@ impl Into<http::Method> for RequestMethod {
 #[derive(Clone, Debug)]
 pub enum RequestType {
     JSON,
+}
+
+impl From<RequestType> for HeaderValue {
+    fn from(ty: RequestType) -> Self {
+        match ty {
+            RequestType::JSON => HeaderValue::from_static("application/json"),
+        }
+    }
 }
 
 /// Represents the type of a HTTP response body

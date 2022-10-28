@@ -81,6 +81,7 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
             self.method(),
             self.query()?,
             self.body()?,
+            Self::REQUEST_BODY_TYPE,
         )?;
 
         self.middleware.request(self, &mut req)?;
@@ -158,7 +159,7 @@ impl<E: Endpoint, M: MiddleWare> Endpoint for MutatedEndpoint<'_, E, M> {
 ///
 /// // Configure a client with a base URL of http://myapi.com
 /// let client = Client::default("http://myapi.com");
-///     
+///
 /// // Construct a new instance of our Endpoint
 /// let endpoint = MyEndpoint {};
 ///
@@ -217,6 +218,7 @@ pub trait Endpoint: Send + Sync + Sized {
             self.method(),
             self.query()?,
             self.body()?,
+            Self::REQUEST_BODY_TYPE,
         )
     }
 

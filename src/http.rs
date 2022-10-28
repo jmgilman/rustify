@@ -4,7 +4,7 @@ use crate::{
     enums::{RequestMethod, RequestType},
     errors::ClientError,
 };
-use http::{Request, Uri};
+use http::{Request, Uri, header::CONTENT_TYPE};
 use serde::Serialize;
 use url::Url;
 
@@ -40,6 +40,7 @@ pub fn build_request(
     method: RequestMethod,
     query: Option<String>,
     data: Option<Vec<u8>>,
+    ty: RequestType,
 ) -> Result<Request<Vec<u8>>, ClientError> {
     debug!("Building endpoint request");
     let uri = build_url(base, path, query)?;
@@ -49,6 +50,7 @@ pub fn build_request(
     Request::builder()
         .uri(uri)
         .method(method)
+        .header(CONTENT_TYPE, ty)
         .body(data.unwrap_or_default())
         .map_err(|e| ClientError::RequestBuildError {
             source: e,
