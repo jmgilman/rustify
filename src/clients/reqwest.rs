@@ -33,6 +33,7 @@ use std::convert::TryFrom;
 /// ```
 ///
 /// [1]: https://docs.rs/reqwest/latest/reqwest/struct.Client.html
+#[derive(Debug, Clone)]
 pub struct Client {
     pub http: reqwest::Client,
     pub base: String,
