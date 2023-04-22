@@ -1,7 +1,7 @@
 [package]
-name = "rustify"
-version = "0.5.3"
-authors = ["Joshua Gilman <joshuagilman@gmail.com>"]
+name = "rustify-serde-fix"
+version = "0.1.0"
+authors = ["George Miao <gm@miao.dev>", "Joshua Gilman <joshuagilman@gmail.com>"]
 description = "A Rust library for interacting with HTTP API endpoints."
 license = "MIT"
 readme = "README.md"
