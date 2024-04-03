@@ -1,0 +1,13 @@
+error: Unknown parameter
+ --> tests/macro/invalid_result.rs:6:32
+  |
+6 | #[endpoint(path = "test/path", result = "DoesNotExist")]
+  |                                ^^^^^^
+
+warning: unused import: `rustify::endpoint::Endpoint`
+ --> tests/macro/invalid_result.rs:1:5
+  |
+1 | use rustify::endpoint::Endpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
