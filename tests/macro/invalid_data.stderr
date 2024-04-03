@@ -1,8 +1,9 @@
 error: May only mark one field as raw
   --> tests/macro/invalid_data.rs:19:5
    |
-19 |     #[endpoint(raw)]
-   |     ^
+19 | /     #[endpoint(raw)]
+20 | |     pub data_two: Vec<u8>,
+   | |_________________________^
 
 warning: unused import: `rustify::endpoint::Endpoint`
  --> tests/macro/invalid_data.rs:1:5
@@ -30,9 +31,6 @@ help: the type constructed contains `std::string::String` due to the type of the
   |                 ^^^^^^^^ this argument influences the type of `Some`
 note: tuple variant defined here
  --> $RUST/core/src/option.rs
-  |
-  |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
-  |     ^^^^
   = note: this error originates in the derive macro `Endpoint` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: call `Into::into` on this expression to convert `std::string::String` into `Vec<u8>`
   |

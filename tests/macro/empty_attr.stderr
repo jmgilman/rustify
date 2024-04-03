@@ -8,7 +8,7 @@ error: Attribute cannot be empty
   --> tests/macro/empty_attr.rs:10:3
    |
 10 | #[endpoint()]
-   |   ^^^^^^^^
+   |   ^^^^^^^^^^
 
 warning: unused import: `rustify::endpoint::Endpoint`
  --> tests/macro/empty_attr.rs:1:5
