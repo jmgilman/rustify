@@ -24,6 +24,9 @@ pub trait Client: Sync + Send {
 
     /// This method provides a common interface to
     /// [Endpoints][crate::endpoint::Endpoint] for execution.
+    // TODO: remove the allow when the upstream clippy issue is fixed:
+    // <https://github.com/rust-lang/rust-clippy/issues/12281>
+    #[allow(clippy::blocks_in_conditions)]
     #[instrument(skip(self, req), err)]
     async fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         debug!(

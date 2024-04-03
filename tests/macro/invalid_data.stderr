@@ -1,0 +1,38 @@
+error: May only mark one field as raw
+  --> tests/macro/invalid_data.rs:19:5
+   |
+19 | /     #[endpoint(raw)]
+20 | |     pub data_two: Vec<u8>,
+   | |_________________________^
+
+warning: unused import: `rustify::endpoint::Endpoint`
+ --> tests/macro/invalid_data.rs:1:5
+  |
+1 | use rustify::endpoint::Endpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0308]: mismatched types
+ --> tests/macro/invalid_data.rs:5:17
+  |
+5 | #[derive(Debug, Endpoint, Serialize)]
+  |                 ^^^^^^^^
+  |                 |
+  |                 expected `Vec<u8>`, found `String`
+  |                 arguments to this enum variant are incorrect
+  |
+  = note: expected struct `Vec<u8>`
+             found struct `std::string::String`
+help: the type constructed contains `std::string::String` due to the type of the argument passed
+ --> tests/macro/invalid_data.rs:5:17
+  |
+5 | #[derive(Debug, Endpoint, Serialize)]
+  |                 ^^^^^^^^ this argument influences the type of `Some`
+note: tuple variant defined here
+ --> $RUST/core/src/option.rs
+  = note: this error originates in the derive macro `Endpoint` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `std::string::String` into `Vec<u8>`
+  |
+5 | #[derive(Debug, Endpoint.into(), Serialize)]
+  |                         +++++++

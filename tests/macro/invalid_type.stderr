@@ -1,0 +1,19 @@
+warning: unused import: `rustify::endpoint::Endpoint`
+ --> tests/macro/invalid_type.rs:1:5
+  |
+1 | use rustify::endpoint::Endpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0599]: no variant or associated item named `BAD` found for enum `RequestType` in the current scope
+ --> tests/macro/invalid_type.rs:6:47
+  |
+6 | #[endpoint(path = "test/path", request_type = "BAD", response_type = "BAD")]
+  |                                               ^^^^^ variant or associated item not found in `RequestType`
+
+error[E0599]: no variant or associated item named `BAD` found for enum `ResponseType` in the current scope
+ --> tests/macro/invalid_type.rs:6:70
+  |
+6 | #[endpoint(path = "test/path", request_type = "BAD", response_type = "BAD")]
+  |                                                                      ^^^^^ variant or associated item not found in `ResponseType`

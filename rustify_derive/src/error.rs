@@ -1,4 +1,5 @@
 use proc_macro2::Span;
+use quote::quote_spanned;
 
 /// The general error object returned by functions in this crate.
 ///
