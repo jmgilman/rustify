@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2024-04-02
+
+### Changed
+
+- Bump request to 0.12
+
 ## [0.5.3] - 2022-03-15
 
 ### Fixed
@@ -166,7 +172,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[unreleased]: https://github.com/jmgilman/rustify/compare/v0.5.3..HEAD
+[unreleased]: https://github.com/jmgilman/rustify/compare/v0.5.4..HEAD
+[0.5.4]: https://github.com/jmgilman/rustify/releases/tag/v0.5.4
 [0.5.3]: https://github.com/jmgilman/rustify/releases/tag/v0.4.4
 [0.5.2]: https://github.com/jmgilman/rustify/releases/tag/v0.5.2
 [0.5.1]: https://github.com/jmgilman/rustify/releases/tag/v0.5.1
