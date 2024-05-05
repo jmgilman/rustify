@@ -31,8 +31,8 @@
 //!
 //! ```ignore
 //! [dependencies]
-//! rustify = "0.5.4"
-//! rustify_derive = "0.5.2"
+//! rustify = "0.6.0"
+//! rustify_derive = "0.5.3"
 //! ```
 //!
 //! ## Usage
