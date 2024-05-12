@@ -17,9 +17,8 @@ pub fn build_body(object: &impl Serialize, ty: RequestType) -> Result<Vec<u8>, C
             let parse_data = serde_json::to_string(object)
                 .map_err(|e| ClientError::DataParseError { source: e.into() })?;
             Ok(match parse_data.as_str() {
-                "null" => "".as_bytes().to_vec(),
-                "{}" => "".as_bytes().to_vec(),
-                _ => parse_data.as_bytes().to_vec(),
+                "null" | "{}" => Vec::new(),
+                _ => parse_data.into(),
             })
         }
     }
@@ -44,7 +43,6 @@ pub fn build_request(
     debug!("Building endpoint request");
     let uri = build_url(base, path, query)?;
 
-    let method_err = method.clone();
     let uri_err = uri.to_string();
     Request::builder()
         .uri(uri)
@@ -52,7 +50,7 @@ pub fn build_request(
         .body(data.unwrap_or_default())
         .map_err(|e| ClientError::RequestBuildError {
             source: e,
-            method: method_err,
+            method,
             url: uri_err,
         })
 }
