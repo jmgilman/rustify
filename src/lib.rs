@@ -234,7 +234,6 @@ pub mod http;
 #[path = "private/mod.rs"]
 pub mod __private;
 
-pub use crate::{
-    clients::reqwest::Client,
-    endpoint::{Endpoint, MiddleWare, Wrapper},
-};
+#[cfg(feature = "reqwest")]
+pub use crate::clients::reqwest::Client;
+pub use crate::endpoint::{Endpoint, MiddleWare, Wrapper};
