@@ -1,6 +1,6 @@
 [package]
 name = "rustify_derive"
-version = "0.5.3"
+version = "0.5.4"
 authors = ["Joshua Gilman <joshuagilman@gmail.com>"]
 description = "A derive macro for implementing an Endpoint for rustify"
 license = "MIT"
