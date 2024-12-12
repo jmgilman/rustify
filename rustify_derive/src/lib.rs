@@ -301,6 +301,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
     let const_name = format!("_DERIVE_Endpoint_FOR_{}", id);
     let const_ident = Ident::new(const_name.as_str(), Span::call_site());
     quote! {
+        #[allow(non_local_definitions)]
         const #const_ident: () = {
             use rustify::__private::serde::Serialize;
             use rustify::http::{build_body, build_query};
