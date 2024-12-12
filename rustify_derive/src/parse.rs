@@ -96,11 +96,9 @@ pub(crate) fn attributes(attrs: &[Attribute], name: &str) -> Result<Vec<Meta>, E
     let mut result = Vec::<Meta>::new();
     for attr in attrs.iter() {
         let meta = attr.parse_meta().map_err(Error::from)?;
-        match meta.path().is_ident(name) {
-            true => {
-                result.push(meta);
-            }
-            false => {}
+
+        if meta.path().is_ident(name) {
+            result.push(meta);
         }
     }
 

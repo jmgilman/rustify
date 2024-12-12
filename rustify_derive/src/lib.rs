@@ -271,11 +271,7 @@ fn endpoint_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 
     // Find serde attributes
     let serde_attrs = parse::attributes(&s.ast().attrs, "serde");
-    let serde_attrs = if let Ok(v) = serde_attrs {
-        v
-    } else {
-        Vec::<Meta>::new()
-    };
+    let serde_attrs = serde_attrs.unwrap_or_default();
 
     // Generate path string
     let path = match gen_path(&path) {
