@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2024-12-12
+
+### Fixed
+
+- allow rustc [`non_local_definition`](https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#non-local-definitions) warning on builder derive
+
 ## [0.5.4] - 2024-04-02
 
 ### Changed

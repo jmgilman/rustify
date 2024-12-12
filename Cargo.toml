@@ -1,6 +1,6 @@
 [package]
 name = "rustify"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Joshua Gilman <joshuagilman@gmail.com>"]
 description = "A Rust library for interacting with HTTP API endpoints."
 license = "MIT"
