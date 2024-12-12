@@ -31,7 +31,7 @@ pub trait Client: Sync + Send {
     async fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         debug!(
             "Client sending {} request to {} with {} bytes of data",
-            req.method().to_string(),
+            req.method(),
             req.uri(),
             req.body().len(),
         );
@@ -47,7 +47,7 @@ pub trait Client: Sync + Send {
         if !HTTP_SUCCESS_CODES.contains(&response.status().as_u16()) {
             return Err(ClientError::ServerResponseError {
                 code: response.status().as_u16(),
-                content: String::from_utf8(response.body().to_vec()).ok(),
+                content: String::from_utf8(response.into_body()).ok(),
             });
         }
 

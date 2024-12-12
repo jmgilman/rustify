@@ -22,7 +22,7 @@ pub trait Client {
     fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         debug!(
             "Client sending {} request to {} with {} bytes of data",
-            req.method().to_string(),
+            req.method(),
             req.uri(),
             req.body().len(),
         );
