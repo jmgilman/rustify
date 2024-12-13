@@ -27,20 +27,21 @@ pub trait Client: Sync + Send {
     // TODO: remove the allow when the upstream clippy issue is fixed:
     // <https://github.com/rust-lang/rust-clippy/issues/12281>
     #[allow(clippy::blocks_in_conditions)]
-    #[instrument(skip(self, req), err)]
+    #[instrument(skip(self, req), fields(uri=%req.uri(), method=%req.method()), err)]
     async fn execute(&self, req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, ClientError> {
         debug!(
-            "Client sending {} request to {} with {} bytes of data",
-            req.method().to_string(),
-            req.uri(),
-            req.body().len(),
+            name: "sending_request",
+            body_len=req.body().len(),
+            "Sending Request",
         );
         let response = self.send(req).await?;
-
+        let status = response.status();
         debug!(
-            "Client received {} response with {} bytes of body data",
-            response.status().as_u16(),
-            response.body().len()
+            name: "response_received",
+            status=status.as_u16(),
+            response_len=response.body().len(),
+            is_error=status.is_client_error() || status.is_server_error(),
+            "Response Received",
         );
 
         // Check response

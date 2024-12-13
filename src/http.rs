@@ -41,7 +41,7 @@ pub fn build_request(
     query: Option<String>,
     data: Option<Vec<u8>>,
 ) -> Result<Request<Vec<u8>>, ClientError> {
-    debug!("Building endpoint request");
+    trace!("Building endpoint request");
     let uri = build_url(base, path, query)?;
 
     let method_err = method.clone();
