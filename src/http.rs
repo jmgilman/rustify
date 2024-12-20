@@ -62,7 +62,16 @@ pub fn build_request(
 #[instrument(skip(query), err)]
 pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, ClientError> {
     let mut url = Url::parse(base).map_err(|e| ClientError::UrlParseError { source: e })?;
-    url.path_segments_mut().unwrap().extend(path.split('/'));
+
+    // remove leading `/` from path to avoid double `//` when base has a path
+    let path = path.strip_prefix('/').unwrap_or(path);
+
+    url.path_segments_mut()
+        .unwrap()
+        // avoids double `//` when base path has trailing slash
+        .pop_if_empty()
+        .extend(path.split('/'));
+
     if let Some(q) = query {
         url.set_query(Some(q.as_str()));
     }
