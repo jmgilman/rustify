@@ -71,3 +71,62 @@ pub fn build_url(base: &str, path: &str, query: Option<String>) -> Result<Uri, C
         .parse::<Uri>()
         .map_err(|e| ClientError::UrlBuildError { source: e })
 }
+
+#[cfg(test)]
+mod test {
+    use super::build_url;
+
+    #[test]
+    fn build_url_path_with_trailing_slash() {
+        let url = build_url("https://192.0.2.2", "foobar/", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/foobar/");
+    }
+
+    #[test]
+    fn build_url_base_without_path_and_path_without_slash() {
+        let url = build_url("https://192.0.2.2", "foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/foobar");
+    }
+
+    #[test]
+    fn build_url_base_without_path_and_path_with_slash() {
+        let url = build_url("https://192.0.2.2", "/foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_trailing_slash_and_path_without_slash() {
+        let url = build_url("https://192.0.2.2/", "foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_trailing_slash_and_path_with_slash() {
+        let url = build_url("https://192.0.2.2/", "/foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_path_and_path_without_slash() {
+        let url = build_url("https://192.0.2.2/base/path", "foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/base/path/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_path_and_path_with_slash() {
+        let url = build_url("https://192.0.2.2/base/path", "/foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/base/path/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_path_and_trailing_slash_and_path_without_slash() {
+        let url = build_url("https://192.0.2.2/base/path/", "foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/base/path/foobar");
+    }
+
+    #[test]
+    fn build_url_base_with_path_and_trailing_slash_and_path_with_slash() {
+        let url = build_url("https://192.0.2.2/base/path/", "/foobar", None).unwrap();
+        assert_eq!(url.to_string(), "https://192.0.2.2/base/path/foobar");
+    }
+}
