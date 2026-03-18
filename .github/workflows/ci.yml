@@ -39,6 +39,11 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+      - name: Check default-features = false
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --no-default-features -- -D warnings
   test:
     name: Run cargo test
     runs-on: ubuntu-latest
