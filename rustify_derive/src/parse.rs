@@ -219,7 +219,7 @@ pub(crate) fn fields_to_struct(fields: &[Field], attrs: &[Meta]) -> proc_macro2:
         .collect::<Vec<proc_macro2::TokenStream>>();
 
     quote! {
-        #[derive(Serialize)]
+        #[derive(serde::Serialize)]
         #(#attrs)*
         struct __Temp<'a> {
             #(#def)*
