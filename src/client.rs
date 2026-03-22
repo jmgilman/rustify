@@ -56,3 +56,35 @@ pub trait Client: Sync + Send {
         Ok(response)
     }
 }
+
+/// Client that wraps another client and adds a bearer token authentication header to each request.
+pub struct BearerTokenAuthClient<C: Client> {
+    token: String,
+    client: C,
+}
+
+impl <C: Client> BearerTokenAuthClient<C> {
+    /// Construct from an arbitrary client and a bearer token.
+    pub fn new(client: C, token: &str) -> Self {
+        Self { client, token: token.to_string() }
+    }
+}
+
+#[async_trait::async_trait]
+impl <C: Client> Client for BearerTokenAuthClient<C> {
+    fn base(&self) ->  &str {
+        self.client.base()
+    }
+
+    async fn send(&self, mut req: Request<Vec<u8>>) ->  Result<Response<Vec<u8>>, ClientError> {
+        let bearer = format!("Bearer {}", self.token);
+        match http::HeaderValue::from_str(&bearer) {
+            Ok(mut bearer) => {
+                bearer.set_sensitive(true);
+                req.headers_mut().insert("Authorization", bearer);
+                self.client.send(req).await
+            }
+            Err(e) => Err(ClientError::GenericError { source: e.into() })
+        }
+    }
+}

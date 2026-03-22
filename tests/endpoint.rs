@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use common::{Middle, TestGenericWrapper, TestResponse, TestServer};
 use derive_builder::Builder;
 use httpmock::prelude::*;
-use rustify::endpoint::Endpoint;
+use rustify::{client::BearerTokenAuthClient, endpoint::Endpoint};
 use rustify_derive::Endpoint;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
@@ -348,4 +348,23 @@ async fn test_complex() {
     m.assert();
     assert!(r.is_ok());
     assert_eq!(r.unwrap().parse().unwrap().age, 30);
+}
+
+#[test(tokio::test)]
+async fn test_bearer_token_auth_client() {
+    #[derive(Endpoint)]
+    #[endpoint(path = "test/path")]
+    struct Test {}
+
+    let t = TestServer::default();
+    let e = Test {};
+    let m = t.server.mock(|when, then| {
+        when.header("Authorization", "Bearer 1234567890");
+        then.status(200);
+    });
+    let client = BearerTokenAuthClient::new(t.client, "1234567890");
+    let r = e.exec(&client).await;
+
+    m.assert();
+    assert!(r.is_ok());
 }

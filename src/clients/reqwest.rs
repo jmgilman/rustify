@@ -1,7 +1,7 @@
 //! Contains an implementation of [Client][crate::client::Client] being backed
 //! by the [reqwest](https://docs.rs/reqwest/) crate.
 
-use crate::{client::Client as RustifyClient, errors::ClientError};
+use crate::{client::{Client as RustifyClient, BearerTokenAuthClient}, errors::ClientError};
 use async_trait::async_trait;
 use http::{Request, Response};
 use std::convert::TryFrom;
@@ -100,5 +100,12 @@ impl RustifyClient for Client {
                     .to_vec(),
             )
             .map_err(|e| ClientError::ResponseError { source: e.into() })
+    }
+}
+
+impl BearerTokenAuthClient<Client> {
+    /// Construct from a default client using a given base URL and a bearer token.
+    pub fn default(base: &str, token: &str) -> Self {
+        BearerTokenAuthClient::new(Client::default(base), token)
     }
 }
