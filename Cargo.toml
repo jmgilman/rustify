@@ -14,10 +14,11 @@ edition = "2018"
 
 [features]
 default = ["rustls"]
-rustls = ["reqwest/rustls"]
-blocking = ["reqwest/blocking"]
-native-tls = ["reqwest/native-tls"]
-rustls-no-provider = ["reqwest/rustls-no-provider"]
+reqwest = ["dep:reqwest"]
+rustls = ["reqwest", "reqwest/rustls"]
+blocking = ["reqwest", "reqwest/blocking"]
+native-tls = ["reqwest", "reqwest/native-tls"]
+rustls-no-provider = ["reqwest", "reqwest/rustls-no-provider"]
 
 [workspace]
 members = [
@@ -29,7 +30,7 @@ anyhow = "1.0.56"
 async-trait = "0.1.52"
 bytes = "1.1.0"
 http = "1"
-reqwest = { version = "0.13.0", default-features = false }
+reqwest = { version = "0.13.0", default-features = false, optional = true }
 rustify_derive = { version = "0.5.5", path = "rustify_derive" }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"

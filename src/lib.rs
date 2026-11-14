@@ -193,6 +193,12 @@
 //! ## Features
 //! The following features are available for this crate:
 //!
+//! * `reqwest`: Enables [Client], the [reqwest](https://docs.rs/reqwest) based
+//!   implementation of [client::Client]. Without it, rustify has no HTTP client
+//!   of its own and endpoints run on any [client::Client] you implement, for
+//!   example over a platform's HTTP API on WebAssembly.
+//! * `rustls` (default), `native-tls`, `rustls-no-provider`: Enable `reqwest`
+//!   with the matching TLS backend.
 //! * `blocking`: Enables the blocking variants of `Client`s as well as the blocking
 //!   `exec()` functions in `Endpoint`s.
 //!
@@ -234,7 +240,6 @@ pub mod http;
 #[path = "private/mod.rs"]
 pub mod __private;
 
-pub use crate::{
-    clients::reqwest::Client,
-    endpoint::{Endpoint, MiddleWare, Wrapper},
-};
+#[cfg(feature = "reqwest")]
+pub use crate::clients::reqwest::Client;
+pub use crate::endpoint::{Endpoint, MiddleWare, Wrapper};

@@ -24,6 +24,7 @@ pub enum ClientError {
         method: RequestMethod,
         url: String,
     },
+    #[cfg(feature = "reqwest")]
     #[error("Error building request for Reqwest crate")]
     ReqwestBuildError { source: reqwest::Error },
     #[error("Error retrieving HTTP response")]
