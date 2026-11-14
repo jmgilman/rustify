@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `reqwest` feature for the reqwest client. The TLS features and `blocking` enable it. With `default-features = false` and no TLS feature, rustify builds without reqwest, so endpoints can run on a custom `Client`, for example on `wasm32-wasip2`/`wasip3`.
+
 ## [0.7.0] - 2026-03-17
 
 ### Added
